@@ -64,6 +64,8 @@ def main():
                 f"Roll: {info['roll']:6.3f} | "
                 f"Collective: {info['collective']:.3f} | "
                 f"Hold: {info['target_hold_steps']:3d}"
+                f"RollRate: {info['roll_rate']:6.3f} | "
+                f"PitchRate: {info['pitch_rate']:6.3f} | "
             )
 
         if terminated or truncated:
