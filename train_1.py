@@ -17,16 +17,18 @@ def main():
     )
 
     model.learn(
-        total_timesteps=10_000
+        total_timesteps=30_000
     )
 
     model.save(
-        "ppo_ah1s_task1"
+        "ppo_ah1s_task1_takeoff"
     )
 
     env.close()
 
-    print("Task 1 training tamamlandı.")
+    print(
+        "Task 1 TAKEOFF training tamamlandı."
+    )
 
 
 if __name__ == "__main__":
