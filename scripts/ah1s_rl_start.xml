@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+
+<runscript name="AH-1S RL Start">
+
+  <use aircraft="ah1s" initialize="reset00"/>
+
+  <run start="0.0" end="2800.0" dt="0.0075">
+
+    <property value="1"> simulation/test-variant </property>
+
+    <property value="0.0"> propulsion/tank[0]/contents-lbs </property>
+    <property value="0.0"> propulsion/tank[1]/contents-lbs </property>
+
+    <property value="1.0"> aero/setup/downwash-enable </property>
+    <property value="0.05"> aero/setup/Nr_limiter </property>
+
+    <property value="0.0"> fcs/adj/collective-profile </property>
+    <property value="1.0"> fcs/adj/center-sensitivity </property>
+
+    <property value="0.0"> fcs/collective-cmd-norm </property>
+
+    <event name="Engage RPM governor">
+      <condition>
+        simulation/sim-time-sec ge 0.1
+      </condition>
+
+      <set
+        name="fcs/collective-cmd-norm"
+        value="0.0"
+      />
+
+      <set
+        name="fcs/rpm-governor-active-norm"
+        value="1.0"
+      />
+    </event>
+
+  </run>
+
+</runscript>
