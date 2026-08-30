@@ -8,7 +8,7 @@ def main():
     env = HelicopterEnv()
 
     model = PPO.load(
-        "ppo_ah1s_task1_takeoff",
+        "ppo_ah1s_task1_takeoff_residual",
         env=env
     )
 
