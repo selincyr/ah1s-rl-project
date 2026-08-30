@@ -21,13 +21,13 @@ def main():
     )
 
     model.save(
-        "ppo_ah1s_task1_takeoff_residual"
+        "ppo_ah1s_task1_rates"
     )
 
     env.close()
 
     print(
-        "Task 1 residual TAKEOFF training tamamlandı."
+        "Task 1 rate-aware training tamamlandı."
     )
 
 
