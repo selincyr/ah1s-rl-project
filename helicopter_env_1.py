@@ -36,8 +36,6 @@ class HelicopterEnv(gym.Env):
         # action[1] = elevator
         # action[2] = aileron
         # action[3] = rudder
-        #
-        # PPO bütün action'ları -1 / +1 arasında üretir.
 
         self.action_space = spaces.Box(
             low=-1.0,
@@ -60,7 +58,6 @@ class HelicopterEnv(gym.Env):
         # 7 = rotor RPM
 
         self.observation_space = spaces.Box(
-
             low=np.array(
                 [
                     -1000,
@@ -96,35 +93,30 @@ class HelicopterEnv(gym.Env):
         # TASK 1 - CURRICULUM 1
         # ==========================================
 
-        # Şimdilik tek hedef:
+        # Şimdilik:
         #
-        # YERDEN KALK
-        # ->
-        # 1000 FT AGL'E ÇIK
-        # ->
-        # STABİL KAL
+        # yerden kalk
+        # 1000 ft AGL'e çık
+        # stabil kal
 
         self.target_altitude = 1000.0
 
-        # İstenen yaklaşık yükselme hızı
+        # Hedef yükselme hızı
         self.target_climb_rate = 15.0
 
         self.target_heading = None
 
         self.phase = "TAKEOFF"
 
-        # Hedef irtifada kaç step stabil kaldı?
         self.target_hold_steps = 0
 
-        # 50 step yaklaşık 3.75 saniye
+        # Yaklaşık 3.75 saniye
         self.required_hold_steps = 50
 
         self.max_steps = 5000
 
         self.steps = 0
 
-        # Bir önceki irtifayı tutacağız.
-        # Böylece gerçekten yükselmeyi ödüllendireceğiz.
         self.previous_altitude = None
 
         self.fdm = None
@@ -235,7 +227,6 @@ class HelicopterEnv(gym.Env):
 
         self._warmup_rotor()
 
-        # Başlangıç yönünü hedef heading kabul ediyoruz.
         self.target_heading = float(
             self.fdm[
                 "attitude/heading-true-rad"
@@ -249,42 +240,18 @@ class HelicopterEnv(gym.Env):
         )
 
         info = {
-
-            "phase":
-                self.phase,
-
-            "altitude":
-                float(obs[0]),
-
-            "forward_velocity":
-                float(obs[1]),
-
-            "vertical_speed":
-                float(obs[2]),
-
-            "heading":
-                float(obs[3]),
-
-            "target_heading":
-                self.target_heading,
-
-            "pitch":
-                float(obs[4]),
-
-            "roll":
-                float(obs[5]),
-
-            "yaw_rate":
-                float(obs[6]),
-
-            "rotor_rpm":
-                float(obs[7]),
-
-            "collective":
-                0.0,
-
-            "success":
-                False
+            "phase": self.phase,
+            "altitude": float(obs[0]),
+            "forward_velocity": float(obs[1]),
+            "vertical_speed": float(obs[2]),
+            "heading": float(obs[3]),
+            "target_heading": self.target_heading,
+            "pitch": float(obs[4]),
+            "roll": float(obs[5]),
+            "yaw_rate": float(obs[6]),
+            "rotor_rpm": float(obs[7]),
+            "collective": 0.0,
+            "success": False
         }
 
         return obs, info
@@ -314,12 +281,6 @@ class HelicopterEnv(gym.Env):
         # ==================================
         # ACTION DÖNÜŞÜMÜ
         # ==================================
-
-        # PPO:
-        # -1 ... +1
-        #
-        # JSBSim collective:
-        # 0 ... 1
 
         collective = (
             float(action[0]) + 1.0
@@ -351,9 +312,6 @@ class HelicopterEnv(gym.Env):
         # PHYSICS
         # ==================================
 
-        # JSBSim dt = 0.0075
-        # 10 physics step = 0.075 saniye
-
         for _ in range(10):
 
             if not self.fdm.run():
@@ -382,7 +340,6 @@ class HelicopterEnv(gym.Env):
         # ==================================
 
         heading_error = np.arctan2(
-
             np.sin(
                 heading
                 - self.target_heading
@@ -420,40 +377,26 @@ class HelicopterEnv(gym.Env):
             - altitude
         )
 
-        # ----------------------------------
-        # 1) GERÇEKTEN YÜKSELMESİNİ ÖDÜLLENDİR
-        # ----------------------------------
-
-        # Örneğin:
-        #
-        # önceki altitude = 100
-        # yeni altitude     = 101
-        #
-        # progress = +1
-        #
-        # reward = +5
+        # ==================================
+        # 1) YÜKSELME İLERLEMESİ
+        # ==================================
 
         reward += (
             5.0
             * altitude_progress
         )
 
-        # Alçalırsa progress negatif olur
-        # ve otomatik olarak ceza alır.
-
-        # ----------------------------------
-        # 2) YERDE BEKLEME CEZASI
-        # ----------------------------------
+        # ==================================
+        # 2) YERDE BEKLEME
+        # ==================================
 
         if altitude < 10.0:
 
             reward -= 1.0
 
-        # ----------------------------------
-        # 3) HEDEF İRTİFAYA YAKINLIK
-        # ----------------------------------
-
-        # 1000 ft'e yaklaştıkça ceza azalır.
+        # ==================================
+        # 3) 1000 FT HEDEFİNE YAKINLIK
+        # ==================================
 
         reward -= (
             0.001
@@ -462,12 +405,9 @@ class HelicopterEnv(gym.Env):
             )
         )
 
-        # ----------------------------------
-        # 4) YÜKSELME HIZI
-        # ----------------------------------
-
-        # Havalandıktan sonra yaklaşık
-        # 15 ft/s climb rate istiyoruz.
+        # ==================================
+        # 4) CLIMB RATE
+        # ==================================
 
         if (
             altitude > 15.0
@@ -480,44 +420,55 @@ class HelicopterEnv(gym.Env):
             )
 
             reward -= (
-                0.02
+                0.05
                 * abs(
                     climb_rate_error
                 )
             )
 
-        # ----------------------------------
+        # ==================================
         # 5) ÇOK HIZLI YÜKSELME
-        # ----------------------------------
+        # ==================================
 
-        if vertical_speed > 40.0:
+        # 25 ft/s üzerinde
+        # ceza giderek büyüyor.
 
-            reward -= 10.0
+        if vertical_speed > 25.0:
 
-        # Çok hızlı aşağı düşerse
-        if vertical_speed < -20.0:
+            reward -= (
+                2.0
+                * (
+                    vertical_speed
+                    - 25.0
+                )
+            )
 
-            reward -= 10.0
+        # Çok hızlı alçalma
 
-        # ----------------------------------
-        # 6) İLERİ / GERİ KAÇMASIN
-        # ----------------------------------
+        if vertical_speed < -15.0:
 
-        # Bu aşamada ileri uçmayı henüz
-        # öğretmiyoruz.
-        #
-        # Önce dikey ve stabil kalkış.
+            reward -= (
+                2.0
+                * abs(
+                    vertical_speed
+                    + 15.0
+                )
+            )
+
+        # ==================================
+        # 6) İLERİ / GERİ KAÇIŞ
+        # ==================================
 
         reward -= (
-            0.01
+            0.03
             * abs(
                 forward_velocity
             )
         )
 
-        # ----------------------------------
+        # ==================================
         # 7) HEADING
-        # ----------------------------------
+        # ==================================
 
         reward -= (
             1.0
@@ -526,23 +477,40 @@ class HelicopterEnv(gym.Env):
             )
         )
 
-        # ----------------------------------
+        # ==================================
         # 8) PITCH / ROLL STABİLİTESİ
-        # ----------------------------------
+        # ==================================
 
         reward -= (
-            2.0
+            5.0
             * abs(
                 pitch
             )
         )
 
         reward -= (
-            2.0
+            5.0
             * abs(
                 roll
             )
         )
+
+        # ==================================
+        # 9) AŞIRI COLLECTIVE CEZASI
+        # ==================================
+
+        # Model collective'i sürekli
+        # tavanda tutmasın.
+
+        if collective > 0.85:
+
+            reward -= (
+                2.0
+                * (
+                    collective
+                    - 0.85
+                )
+            )
 
         # ==================================
         # 1000 FT BÖLGESİ
@@ -552,11 +520,10 @@ class HelicopterEnv(gym.Env):
             altitude_error
         ) < 30.0:
 
-            # Hedefe ulaşma ödülü
             reward += 5.0
 
-            # Burada artık dikey hızın
-            # sıfıra yakın olmasını istiyoruz.
+            # 1000 ft civarında
+            # vertical speed sıfıra yaklaşmalı.
 
             reward -= (
                 0.1
@@ -565,7 +532,6 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
-            # Stabil durumda mı?
             if (
                 abs(vertical_speed) < 8.0
                 and abs(pitch) < 0.25
@@ -603,7 +569,6 @@ class HelicopterEnv(gym.Env):
         # GÜVENLİK
         # ==================================
 
-        # Yaklaşık ±69 derece
         if abs(
             pitch
         ) > 1.2:
@@ -626,7 +591,6 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
-        # Aşırı irtifa
         if altitude > 1500.0:
 
             reward -= 100.0
@@ -647,53 +611,23 @@ class HelicopterEnv(gym.Env):
         # ==================================
 
         info = {
-
-            "phase":
-                self.phase,
-
-            "altitude":
-                altitude,
-
-            "forward_velocity":
-                forward_velocity,
-
-            "vertical_speed":
-                vertical_speed,
-
-            "heading":
-                heading,
-
-            "target_heading":
-                self.target_heading,
-
-            "heading_error":
-                float(
-                    heading_error
-                ),
-
-            "pitch":
-                pitch,
-
-            "roll":
-                roll,
-
-            "yaw_rate":
-                yaw_rate,
-
-            "rotor_rpm":
-                rotor_rpm,
-
-            "collective":
-                collective,
-
-            "altitude_progress":
-                altitude_progress,
-
-            "target_hold_steps":
-                self.target_hold_steps,
-
-            "success":
-                success
+            "phase": self.phase,
+            "altitude": altitude,
+            "forward_velocity": forward_velocity,
+            "vertical_speed": vertical_speed,
+            "heading": heading,
+            "target_heading": self.target_heading,
+            "heading_error": float(
+                heading_error
+            ),
+            "pitch": pitch,
+            "roll": roll,
+            "yaw_rate": yaw_rate,
+            "rotor_rpm": rotor_rpm,
+            "collective": collective,
+            "altitude_progress": altitude_progress,
+            "target_hold_steps": self.target_hold_steps,
+            "success": success
         }
 
         return (
