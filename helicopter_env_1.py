@@ -23,15 +23,13 @@ class HelicopterEnv(gym.Env):
 
         # Action:
         # [collective, elevator, aileron, rudder]
+        #
+        # PPO açısından tüm action'ları simetrik tutuyoruz.
+        # Hepsi -1 ile +1 arasında.
         self.action_space = spaces.Box(
-            low=np.array(
-                [0.0, -1.0, -1.0, -1.0],
-                dtype=np.float32
-            ),
-            high=np.array(
-                [1.0, 1.0, 1.0, 1.0],
-                dtype=np.float32
-            ),
+            low=-1.0,
+            high=1.0,
+            shape=(4,),
             dtype=np.float32
         )
 
@@ -84,18 +82,16 @@ class HelicopterEnv(gym.Env):
         # Yaklaşık 21 knot
         self.target_velocity = 35.0
 
-        # Başlangıç heading'i reset sırasında alınacak
+        # Reset sırasında başlangıç heading'i alınacak
         self.target_heading = None
 
         # Görev başlangıç fazı
         self.phase = "TAKEOFF"
 
-        # Cruise sırasında kaç step düzgün uçtuğunu sayacağız
+        # Cruise sırasında düzgün uçuş sayacı
         self.cruise_steps = 0
 
-        # 200 RL step
-        # Her RL step yaklaşık 0.075 saniye
-        # yaklaşık 15 saniyelik cruise
+        # 200 RL step yaklaşık 15 saniye
         self.required_cruise_steps = 200
 
         self.max_steps = 5000
@@ -118,8 +114,7 @@ class HelicopterEnv(gym.Env):
 
     def _warmup_rotor(self):
 
-        # PPO kontrolü almadan önce
-        # rotor yaklaşık çalışma RPM'ine gelsin
+        # PPO kontrolü almadan önce rotor çalışma RPM'ine gelsin
         while (
             self.fdm["propulsion/engine/rotor-rpm"] < 320.0
         ):
@@ -156,8 +151,7 @@ class HelicopterEnv(gym.Env):
         self._create_fdm()
         self._warmup_rotor()
 
-        # Helikopter başlangıçta hangi yöne bakıyorsa
-        # o yönü hedef heading kabul ediyoruz
+        # Başlangıç yönü hedef heading kabul edilir
         self.target_heading = float(
             self.fdm["attitude/heading-true-rad"]
         )
@@ -197,8 +191,17 @@ class HelicopterEnv(gym.Env):
             self.action_space.high
         )
 
-        # PPO'nun ürettiği kontrol komutları
-        self.fdm["fcs/collective-cmd-norm"] = float(action[0])
+        # ==================================
+        # ACTION DONUSUMU
+        # ==================================
+
+        # PPO collective'i -1 ile +1 arasında üretir.
+        # JSBSim collective ise 0 ile 1 arasında bekler.
+        collective = (
+            float(action[0]) + 1.0
+        ) / 2.0
+
+        self.fdm["fcs/collective-cmd-norm"] = collective
         self.fdm["fcs/elevator-cmd-norm"] = float(action[1])
         self.fdm["fcs/aileron-cmd-norm"] = float(action[2])
         self.fdm["fcs/rudder-cmd-norm"] = float(action[3])
@@ -260,8 +263,7 @@ class HelicopterEnv(gym.Env):
             reward -= 0.5 * abs(pitch)
             reward -= 0.5 * abs(roll)
 
-            # 1000 ft civarına ulaştıysa
-            # CRUISE fazına geç
+            # 1000 ft civarına ulaştıysa CRUISE
             if abs(altitude_error) < 30:
 
                 self.phase = "CRUISE"
@@ -304,7 +306,6 @@ class HelicopterEnv(gym.Env):
             reward -= 0.5 * abs(pitch)
             reward -= 0.5 * abs(roll)
 
-            # İstenen uçuş şartlarını sağlıyorsa
             if (
                 abs(altitude_error) < 50
                 and abs(velocity_error) < 10
@@ -320,7 +321,6 @@ class HelicopterEnv(gym.Env):
                 self.cruise_steps = 0
 
             # Yaklaşık 15 saniye düzgün cruise
-            # yaptıysa LANDING'e geç
             if (
                 self.cruise_steps
                 >= self.required_cruise_steps
@@ -362,7 +362,7 @@ class HelicopterEnv(gym.Env):
             reward -= 0.5 * abs(pitch)
             reward -= 0.5 * abs(roll)
 
-            # Çok sert alçalma cezası
+            # Çok sert alçalma
             if vertical_speed < -15:
 
                 reward -= 20.0
@@ -379,25 +379,22 @@ class HelicopterEnv(gym.Env):
                 terminated = True
 
         # ==================================
-        # GÜVENLİK KONTROLLERİ
+        # GUVENLIK KONTROLLERI
         # ==================================
 
         if abs(pitch) > 1.2:
 
             reward -= 100.0
-
             terminated = True
 
         if abs(roll) > 1.2:
 
             reward -= 100.0
-
             terminated = True
 
         if rotor_rpm < 250:
 
             reward -= 100.0
-
             terminated = True
 
         truncated = (
@@ -414,7 +411,8 @@ class HelicopterEnv(gym.Env):
             "pitch": pitch,
             "roll": roll,
             "yaw_rate": yaw_rate,
-            "rotor_rpm": rotor_rpm
+            "rotor_rpm": rotor_rpm,
+            "collective": collective
         }
 
         return (
