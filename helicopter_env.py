@@ -15,18 +15,17 @@ class HelicopterEnv(gym.Env):
         # JSBSim'in kurulu olduğu klasör
         self.root_dir = os.path.dirname(jsbsim.__file__)
 
-        # Bizim GitHub reposunun bulunduğu klasör
+        # Bu dosyanın bulunduğu proje klasörü
         project_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Artık JSBSim'in otomatik flight-test scriptini değil,
-        # bizim temiz RL başlangıç scriptimizi kullanıyoruz.
+        # Bizim temiz RL başlangıç scriptimiz
         self.script_path = os.path.join(
             project_dir,
             "scripts",
             "ah1s_rl_start.xml"
         )
 
-        # action =
+        # ACTION
         # [collective, elevator, aileron, rudder]
         self.action_space = spaces.Box(
             low=np.array(
@@ -40,20 +39,48 @@ class HelicopterEnv(gym.Env):
             dtype=np.float32
         )
 
-        # observation =
-        # [altitude, pitch, roll, yaw_rate, vertical_speed, rotor_rpm]
+        # OBSERVATION
+        #
+        # 0 altitude
+        # 1 forward velocity
+        # 2 vertical speed
+        # 3 heading
+        # 4 pitch
+        # 5 roll
+        # 6 yaw rate
+        # 7 rotor rpm
         self.observation_space = spaces.Box(
             low=np.array(
-                [-1000, -np.pi/2, -np.pi, -20, -500, 0],
+                [
+                    -1000,
+                    -500,
+                    -500,
+                    0.0,
+                    -np.pi / 2,
+                    -np.pi,
+                    -20,
+                    0
+                ],
                 dtype=np.float32
             ),
             high=np.array(
-                [10000, np.pi/2, np.pi, 20, 500, 700],
+                [
+                    10000,
+                    500,
+                    500,
+                    2 * np.pi,
+                    np.pi / 2,
+                    np.pi,
+                    20,
+                    700
+                ],
                 dtype=np.float32
             ),
             dtype=np.float32
         )
 
+        # Şimdilik eski altitude hedefi
+        # Bir sonraki aşamada Task 1'e göre değiştireceğiz.
         self.target_altitude = 75.0
 
         self.max_steps = 2000
@@ -76,8 +103,10 @@ class HelicopterEnv(gym.Env):
 
     def _warmup_rotor(self):
 
-        # Rotor motor çalışır duruma gelene kadar simülasyonu ilerlet.
-        # Testimizde yaklaşık 2.3 saniyede 320 RPM'e ulaştığını gördük.
+        # Rotor yaklaşık çalışma devrine ulaşana kadar
+        # simülasyonu kendi içinde ilerletiyoruz.
+        #
+        # Bu kısım RL timestep'lerine dahil değil.
         while (
             self.fdm["propulsion/engine/rotor-rpm"]
             < 320.0
@@ -90,14 +119,36 @@ class HelicopterEnv(gym.Env):
 
     def _get_obs(self):
 
-        return np.array([
-            self.fdm["position/h-agl-ft"],
-            self.fdm["attitude/pitch-rad"],
-            self.fdm["attitude/roll-rad"],
-            self.fdm["velocities/r-rad_sec"],
-            self.fdm["velocities/h-dot-fps"],
-            self.fdm["propulsion/engine/rotor-rpm"]
-        ], dtype=np.float32)
+        return np.array(
+            [
+                # 0 - Yerden yükseklik
+                self.fdm["position/h-agl-ft"],
+
+                # 1 - Gövdenin ileri yönündeki hız
+                self.fdm["velocities/u-aero-fps"],
+
+                # 2 - Dikey hız
+                self.fdm["velocities/h-dot-fps"],
+
+                # 3 - Heading
+                self.fdm["attitude/heading-true-rad"],
+
+                # 4 - Pitch
+                self.fdm["attitude/pitch-rad"],
+
+                # 5 - Roll
+                self.fdm["attitude/roll-rad"],
+
+                # 6 - Yaw rate
+                self.fdm["velocities/r-rad_sec"],
+
+                # 7 - Rotor RPM
+                self.fdm[
+                    "propulsion/engine/rotor-rpm"
+                ]
+            ],
+            dtype=np.float32
+        )
 
     def reset(self, seed=None, options=None):
 
@@ -105,22 +156,24 @@ class HelicopterEnv(gym.Env):
 
         self.steps = 0
 
-        # Her episode'da temiz JSBSim instance
+        # Her episode'da temiz bir JSBSim örneği
         self._create_fdm()
 
-        # Artık 55 saniyelik hover beklemiyoruz.
-        # Sadece rotor çalışır hale gelene kadar bekliyoruz.
+        # Helikopter yerde.
+        # Sadece rotor çalışma devrine getiriliyor.
         self._warmup_rotor()
 
         obs = self._get_obs()
 
         info = {
-            "rotor_rpm": float(
-                self.fdm["propulsion/engine/rotor-rpm"]
-            ),
-            "altitude": float(
-                self.fdm["position/h-agl-ft"]
-            ),
+            "altitude": float(obs[0]),
+            "forward_velocity": float(obs[1]),
+            "vertical_speed": float(obs[2]),
+            "heading": float(obs[3]),
+            "pitch": float(obs[4]),
+            "roll": float(obs[5]),
+            "yaw_rate": float(obs[6]),
+            "rotor_rpm": float(obs[7]),
             "sim_time": float(
                 self.fdm["simulation/sim-time-sec"]
             )
@@ -143,25 +196,34 @@ class HelicopterEnv(gym.Env):
             self.action_space.high
         )
 
-        # PPO'nun ürettiği pilot komutları
+        # PPO'nun verdiği kontrol komutları
+
+        # Collective:
+        # rotor palalarının toplam açısını değiştirir.
         self.fdm["fcs/collective-cmd-norm"] = float(
             action[0]
         )
 
+        # Elevator / longitudinal cyclic:
+        # ileri-geri hareket üzerinde etkili
         self.fdm["fcs/elevator-cmd-norm"] = float(
             action[1]
         )
 
+        # Aileron / lateral cyclic:
+        # sağ-sol yatış üzerinde etkili
         self.fdm["fcs/aileron-cmd-norm"] = float(
             action[2]
         )
 
+        # Rudder / pedal:
+        # yaw üzerinde etkili
         self.fdm["fcs/rudder-cmd-norm"] = float(
             action[3]
         )
 
-        # Bir RL step içerisinde
-        # JSBSim fiziğini birkaç kez ilerletiyoruz.
+        # JSBSim dt = 0.0075 saniye.
+        # Her RL step'inde 10 fizik adımı ilerliyoruz.
         physics_steps = 10
 
         for _ in range(physics_steps):
@@ -171,12 +233,23 @@ class HelicopterEnv(gym.Env):
 
         obs = self._get_obs()
 
+        # Observation değerlerini açıyoruz.
         altitude = float(obs[0])
-        pitch = float(obs[1])
-        roll = float(obs[2])
-        yaw_rate = float(obs[3])
-        vertical_speed = float(obs[4])
-        rotor_rpm = float(obs[5])
+        forward_velocity = float(obs[1])
+        vertical_speed = float(obs[2])
+        heading = float(obs[3])
+        pitch = float(obs[4])
+        roll = float(obs[5])
+        yaw_rate = float(obs[6])
+        rotor_rpm = float(obs[7])
+
+        # ----------------------------------
+        # ŞİMDİLİK ESKİ REWARD
+        # ----------------------------------
+        #
+        # Henüz Task 1 reward'una geçmedik.
+        # Önce yeni observation'ların
+        # doğru çalıştığını test edeceğiz.
 
         altitude_error = (
             altitude - self.target_altitude
@@ -203,8 +276,10 @@ class HelicopterEnv(gym.Env):
 
         terminated = False
 
-        # ŞİMDİLİK altitude < 7 termination YOK.
-        # Çünkü helikopter yerde ~6.29 ft gösteriyor.
+        # altitude < 7 kontrolü yok.
+        #
+        # Çünkü helikopter yerdeyken
+        # AGL yaklaşık 6.29 ft gösteriyor.
 
         if abs(pitch) > 1.2:
             terminated = True
@@ -224,10 +299,13 @@ class HelicopterEnv(gym.Env):
 
         info = {
             "altitude": altitude,
-            "rotor_rpm": rotor_rpm,
+            "forward_velocity": forward_velocity,
+            "vertical_speed": vertical_speed,
+            "heading": heading,
             "pitch": pitch,
             "roll": roll,
-            "vertical_speed": vertical_speed
+            "yaw_rate": yaw_rate,
+            "rotor_rpm": rotor_rpm
         }
 
         return (
