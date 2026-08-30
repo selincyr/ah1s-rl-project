@@ -6,18 +6,14 @@ def main():
 
     env = HelicopterEnv()
 
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=1,
-        learning_rate=3e-4,
-        gamma=0.99,
-        n_steps=1024,
-        batch_size=64
+    model = PPO.load(
+        "ppo_ah1s_task1_takeoff",
+        env=env
     )
 
     model.learn(
-        total_timesteps=30_000
+        total_timesteps=30_000,
+        reset_num_timesteps=False
     )
 
     model.save(
@@ -27,7 +23,7 @@ def main():
     env.close()
 
     print(
-        "Task 1 TAKEOFF training tamamlandı."
+        "Task 1 TAKEOFF ek training tamamlandı."
     )
 
 
