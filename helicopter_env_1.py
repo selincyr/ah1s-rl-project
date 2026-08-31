@@ -698,7 +698,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            0.30
+            0.50
             * abs(
                 lateral_velocity
             )
@@ -709,7 +709,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            2.0
+            4.0
             * abs(
                 heading_error
             )
@@ -828,6 +828,7 @@ class HelicopterEnv(gym.Env):
                 and abs(pitch_rate) < 0.10
                 and abs(forward_velocity) < 5.0
                 and abs(lateral_velocity) < 5.0
+                and abs(heading_error) < 0.30
             ):
 
                 self.target_hold_steps += 1
