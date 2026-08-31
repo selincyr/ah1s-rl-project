@@ -368,7 +368,7 @@ def main():
         )
 
         # Küp artık daha dengeli büyüklükte
-        body_scale = 8.0
+        body_scale = 2.0
 
         rotated_vertices *= body_scale
 
