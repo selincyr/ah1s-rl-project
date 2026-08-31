@@ -590,13 +590,13 @@ class HelicopterEnv(gym.Env):
        #     forward_velocity
        # ) > 70.0:
 
-            reward -= (
-                0.20
-                * (
-                    abs(
-                        forward_velocity
-                    )
-                    - 70.0
+        reward -= (
+            0.20
+            * (
+                abs(
+                    forward_velocity
+                )
+                - 70.0
                 )
             )
 
