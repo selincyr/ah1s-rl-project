@@ -2,6 +2,7 @@ import os
 import numpy as np
 import jsbsim
 import gymnasium as gym
+
 from gymnasium import spaces
 
 
@@ -12,11 +13,13 @@ class HelicopterEnv(gym.Env):
     def __init__(self):
         super().__init__()
 
-        # ==========================================
+        # =====================================================
         # JSBSIM
-        # ==========================================
+        # =====================================================
 
-        self.root_dir = os.path.dirname(jsbsim.__file__)
+        self.root_dir = os.path.dirname(
+            jsbsim.__file__
+        )
 
         project_dir = os.path.dirname(
             os.path.abspath(__file__)
@@ -28,14 +31,15 @@ class HelicopterEnv(gym.Env):
             "ah1s_rl_start.xml"
         )
 
-        # ==========================================
+        # =====================================================
         # ACTION SPACE
-        # ==========================================
-
+        # =====================================================
+        #
         # action[0] = collective residual
         # action[1] = elevator residual
         # action[2] = aileron residual
         # action[3] = rudder residual
+        #
 
         self.action_space = spaces.Box(
             low=-1.0,
@@ -44,35 +48,38 @@ class HelicopterEnv(gym.Env):
             dtype=np.float32
         )
 
-        # ==========================================
+        # =====================================================
         # OBSERVATION SPACE
-        # ==========================================
-
-        # 0 = altitude AGL
-        # 1 = forward velocity
-        # 2 = vertical speed
-        # 3 = heading
-        # 4 = pitch
-        # 5 = roll
-        # 6 = roll rate
-        # 7 = pitch rate
-        # 8 = yaw rate
-        # 9 = rotor RPM
+        # =====================================================
+        #
+        # 0  = altitude AGL
+        # 1  = forward velocity
+        # 2  = lateral velocity       <-- YENİ
+        # 3  = vertical speed
+        # 4  = heading
+        # 5  = pitch
+        # 6  = roll
+        # 7  = roll rate
+        # 8  = pitch rate
+        # 9  = yaw rate
+        # 10 = rotor RPM
+        #
 
         self.observation_space = spaces.Box(
 
             low=np.array(
                 [
-                    -1000,
-                    -500,
-                    -500,
-                    0.0,
-                    -np.pi / 2,
-                    -np.pi,
-                    -20,
-                    -20,
-                    -20,
-                    0
+                    -1000,        # altitude
+                    -500,         # forward velocity
+                    -500,         # lateral velocity
+                    -500,         # vertical speed
+                    0.0,          # heading
+                    -np.pi / 2,   # pitch
+                    -np.pi,       # roll
+                    -20,          # roll rate
+                    -20,          # pitch rate
+                    -20,          # yaw rate
+                    0             # rotor RPM
                 ],
                 dtype=np.float32
             ),
@@ -80,6 +87,7 @@ class HelicopterEnv(gym.Env):
             high=np.array(
                 [
                     10000,
+                    500,
                     500,
                     500,
                     2 * np.pi,
@@ -96,11 +104,15 @@ class HelicopterEnv(gym.Env):
             dtype=np.float32
         )
 
-        # ==========================================
-        # TASK 1
-        # ==========================================
+        # =====================================================
+        # TAKEOFF-ONLY TASK
+        # =====================================================
 
-        self.target_altitude = 30.0
+        # Yerde AGL yaklaşık 6.3 ft.
+        # İlk curriculum hedefimiz sadece 20 ft'e
+        # dikeye yakın kalkmak ve orada stabil kalmak.
+
+        self.target_altitude = 20.0
 
         self.target_climb_rate = 5.0
 
@@ -120,9 +132,9 @@ class HelicopterEnv(gym.Env):
 
         self.fdm = None
 
-        # ==========================================
+        # =====================================================
         # BASE CONTROL
-        # ==========================================
+        # =====================================================
 
         self.base_collective = 0.615
 
@@ -132,14 +144,9 @@ class HelicopterEnv(gym.Env):
 
         self.base_rudder = 0.39
 
-        # ==========================================
-        # RESIDUAL SCALE
-        # ==========================================
-
-        # Collective biraz daha geniş kalabilir.
-        #
-        # Cyclic değerlerini küçültüyoruz çünkü
-        # önceki testte roll giderek büyüyordu.
+        # =====================================================
+        # RESIDUAL CONTROL SCALE
+        # =====================================================
 
         self.collective_scale = 0.10
 
@@ -149,9 +156,9 @@ class HelicopterEnv(gym.Env):
 
         self.rudder_scale = 0.06
 
-    # ==========================================
-    # JSBSIM CREATE
-    # ==========================================
+    # =========================================================
+    # CREATE JSBSIM
+    # =========================================================
 
     def _create_fdm(self):
 
@@ -169,9 +176,9 @@ class HelicopterEnv(gym.Env):
 
         self.fdm.run_ic()
 
-    # ==========================================
+    # =========================================================
     # ROTOR WARM-UP
-    # ==========================================
+    # =========================================================
 
     def _warmup_rotor(self):
 
@@ -187,53 +194,65 @@ class HelicopterEnv(gym.Env):
                     "Rotor warm-up sırasında JSBSim durdu"
                 )
 
-    # ==========================================
+    # =========================================================
     # OBSERVATION
-    # ==========================================
+    # =========================================================
 
     def _get_obs(self):
 
         return np.array(
             [
+                # 0 - altitude
                 self.fdm[
                     "position/h-agl-ft"
                 ],
 
+                # 1 - forward velocity
                 self.fdm[
                     "velocities/u-aero-fps"
                 ],
 
+                # 2 - lateral velocity
+                self.fdm[
+                    "velocities/v-aero-fps"
+                ],
+
+                # 3 - vertical speed
                 self.fdm[
                     "velocities/h-dot-fps"
                 ],
 
+                # 4 - heading
                 self.fdm[
                     "attitude/heading-true-rad"
                 ],
 
+                # 5 - pitch
                 self.fdm[
                     "attitude/pitch-rad"
                 ],
 
+                # 6 - roll
                 self.fdm[
                     "attitude/roll-rad"
                 ],
 
-                # Roll rate
+                # 7 - roll rate
                 self.fdm[
                     "velocities/p-rad_sec"
                 ],
 
-                # Pitch rate
+                # 8 - pitch rate
                 self.fdm[
                     "velocities/q-rad_sec"
                 ],
 
-                # Yaw rate
+                # 9 - yaw rate
                 self.fdm[
                     "velocities/r-rad_sec"
                 ],
 
+                # 10 - rotor RPM
                 self.fdm[
                     "propulsion/engine/rotor-rpm"
                 ]
@@ -242,9 +261,9 @@ class HelicopterEnv(gym.Env):
             dtype=np.float32
         )
 
-    # ==========================================
+    # =========================================================
     # RESET
-    # ==========================================
+    # =========================================================
 
     def reset(
         self,
@@ -289,32 +308,35 @@ class HelicopterEnv(gym.Env):
             "forward_velocity":
                 float(obs[1]),
 
-            "vertical_speed":
+            "lateral_velocity":
                 float(obs[2]),
 
-            "heading":
+            "vertical_speed":
                 float(obs[3]),
+
+            "heading":
+                float(obs[4]),
 
             "target_heading":
                 self.target_heading,
 
             "pitch":
-                float(obs[4]),
-
-            "roll":
                 float(obs[5]),
 
-            "roll_rate":
+            "roll":
                 float(obs[6]),
 
-            "pitch_rate":
+            "roll_rate":
                 float(obs[7]),
 
-            "yaw_rate":
+            "pitch_rate":
                 float(obs[8]),
 
-            "rotor_rpm":
+            "yaw_rate":
                 float(obs[9]),
+
+            "rotor_rpm":
+                float(obs[10]),
 
             "collective":
                 self.base_collective,
@@ -328,15 +350,18 @@ class HelicopterEnv(gym.Env):
             "rudder":
                 self.base_rudder,
 
+            "target_hold_steps":
+                0,
+
             "success":
                 False
         }
 
         return obs, info
 
-    # ==========================================
+    # =========================================================
     # STEP
-    # ==========================================
+    # =========================================================
 
     def step(
         self,
@@ -356,9 +381,9 @@ class HelicopterEnv(gym.Env):
             1.0
         )
 
-        # ==========================================
+        # =====================================================
         # RESIDUAL CONTROL
-        # ==========================================
+        # =====================================================
 
         collective = (
             self.base_collective
@@ -384,9 +409,9 @@ class HelicopterEnv(gym.Env):
             * float(action[3])
         )
 
-        # ==========================================
+        # =====================================================
         # CONTROL LIMITS
-        # ==========================================
+        # =====================================================
 
         collective = np.clip(
             collective,
@@ -412,29 +437,37 @@ class HelicopterEnv(gym.Env):
             1.0
         )
 
-        # ==========================================
+        # =====================================================
         # APPLY CONTROLS
-        # ==========================================
+        # =====================================================
 
         self.fdm[
             "fcs/collective-cmd-norm"
-        ] = float(collective)
+        ] = float(
+            collective
+        )
 
         self.fdm[
             "fcs/elevator-cmd-norm"
-        ] = float(elevator)
+        ] = float(
+            elevator
+        )
 
         self.fdm[
             "fcs/aileron-cmd-norm"
-        ] = float(aileron)
+        ] = float(
+            aileron
+        )
 
         self.fdm[
             "fcs/rudder-cmd-norm"
-        ] = float(rudder)
+        ] = float(
+            rudder
+        )
 
-        # ==========================================
+        # =====================================================
         # PHYSICS
-        # ==========================================
+        # =====================================================
 
         for _ in range(10):
 
@@ -443,44 +476,74 @@ class HelicopterEnv(gym.Env):
 
         obs = self._get_obs()
 
-        altitude = float(obs[0])
+        # =====================================================
+        # OBSERVATION VALUES
+        # =====================================================
 
-        forward_velocity = float(obs[1])
+        altitude = float(
+            obs[0]
+        )
 
-        vertical_speed = float(obs[2])
+        forward_velocity = float(
+            obs[1]
+        )
 
-        heading = float(obs[3])
+        lateral_velocity = float(
+            obs[2]
+        )
 
-        pitch = float(obs[4])
+        vertical_speed = float(
+            obs[3]
+        )
 
-        roll = float(obs[5])
+        heading = float(
+            obs[4]
+        )
 
-        roll_rate = float(obs[6])
+        pitch = float(
+            obs[5]
+        )
 
-        pitch_rate = float(obs[7])
+        roll = float(
+            obs[6]
+        )
 
-        yaw_rate = float(obs[8])
+        roll_rate = float(
+            obs[7]
+        )
 
-        rotor_rpm = float(obs[9])
+        pitch_rate = float(
+            obs[8]
+        )
 
-        # ==========================================
+        yaw_rate = float(
+            obs[9]
+        )
+
+        rotor_rpm = float(
+            obs[10]
+        )
+
+        # =====================================================
         # HEADING ERROR
-        # ==========================================
+        # =====================================================
 
         heading_error = np.arctan2(
+
             np.sin(
                 heading
                 - self.target_heading
             ),
+
             np.cos(
                 heading
                 - self.target_heading
             )
         )
 
-        # ==========================================
+        # =====================================================
         # ALTITUDE PROGRESS
-        # ==========================================
+        # =====================================================
 
         altitude_progress = (
             altitude
@@ -500,26 +563,29 @@ class HelicopterEnv(gym.Env):
 
         success = False
 
-        # ==========================================
-        # 1) YÜKSELME ÖDÜLÜ
-        # ==========================================
+        # =====================================================
+        # 1) ALTITUDE PROGRESS
+        # =====================================================
+        #
+        # Yükseliyorsa küçük pozitif reward.
+        #
 
         reward += (
             2.0
             * altitude_progress
         )
 
-        # ==========================================
-        # 2) YERDE BEKLEME
-        # ==========================================
+        # =====================================================
+        # 2) YERDE BEKLEME CEZASI
+        # =====================================================
 
         if altitude < 10.0:
 
             reward -= 1.0
 
-        # ==========================================
-        # 3) ALTITUDE TARGET
-        # ==========================================
+        # =====================================================
+        # 3) TARGET ALTITUDE ERROR
+        # =====================================================
 
         reward -= (
             0.001
@@ -528,9 +594,13 @@ class HelicopterEnv(gym.Env):
             )
         )
 
-        # ==========================================
+        # =====================================================
         # 4) CLIMB RATE
-        # ==========================================
+        # =====================================================
+        #
+        # Kalkışın ilk bölümünde yaklaşık
+        # 5 ft/s dikey hız istiyoruz.
+        #
 
         if (
             altitude > 7.0
@@ -549,9 +619,9 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
-        # ==========================================
+        # =====================================================
         # 5) AŞIRI DİKEY HIZ
-        # ==========================================
+        # =====================================================
 
         if vertical_speed > 10.0:
 
@@ -573,47 +643,51 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
-        # ==========================================
-        # 6) İLERİ / GERİ KAÇIŞ
-        # ==========================================
+        # =====================================================
+        # 6) YATAY KAÇIŞ
+        # =====================================================
+        #
+        # TAKEOFF görevinde hem ileri/geri hem
+        # sağ/sol hareket minimum olmalı.
+        #
+        # Önceki model yüzlerce ft yatay kaçıyordu.
+        #
 
         reward -= (
-            0.10
+            0.30
             * abs(
                 forward_velocity
             )
         )
 
-        # 70 ft/s üzerinde ek ceza
-
-       # if abs(
-       #     forward_velocity
-       # ) > 70.0:
-
         reward -= (
-            0.20
-            * (
-                abs(
-                    forward_velocity
-                )
-                - 70.0
-                )
+            0.30
+            * abs(
+                lateral_velocity
             )
+        )
 
-        # ==========================================
+        # =====================================================
         # 7) HEADING
-        # ==========================================
+        # =====================================================
+        #
+        # Kalkarken başlangıç yönünü korumasını istiyoruz.
+        #
 
         reward -= (
-            0.5
+            2.0
             * abs(
                 heading_error
             )
         )
 
-        # ==========================================
-        # 8) PITCH / ROLL ANGLE
-        # ==========================================
+        # =====================================================
+        # 8) PITCH / ROLL
+        # =====================================================
+        #
+        # Dikey kalkışta gövde mümkün olduğunca
+        # düz kalmalı.
+        #
 
         reward -= (
             5.0
@@ -629,14 +703,9 @@ class HelicopterEnv(gym.Env):
             )
         )
 
-        # ==========================================
-        # 9) ANGULAR RATE
-        # ==========================================
-
-        # Buradaki asıl yeni bilgi:
-        #
-        # PPO artık açının sadece ne kadar olduğunu
-        # değil, ne hızla değiştiğini de görüyor.
+        # =====================================================
+        # 9) ANGULAR RATES
+        # =====================================================
 
         reward -= (
             2.0
@@ -659,41 +728,53 @@ class HelicopterEnv(gym.Env):
             )
         )
 
-        # ==========================================
+        # =====================================================
         # 10) BÜYÜK AÇILARA EK CEZA
-        # ==========================================
+        # =====================================================
 
-        if abs(pitch) > 0.5:
+        if abs(
+            pitch
+        ) > 0.5:
 
             reward -= 20.0
 
-        if abs(roll) > 0.5:
+        if abs(
+            roll
+        ) > 0.5:
 
             reward -= 30.0
 
-        # ==========================================
+        # =====================================================
         # 11) ACTION ENERGY
-        # ==========================================
+        # =====================================================
+        #
+        # Kontrollerin gereksiz yere sürekli
+        # uç noktalara gitmesini azaltır.
+        #
 
         reward -= (
             0.2
             * float(
                 np.sum(
-                    np.square(action)
+                    np.square(
+                        action
+                    )
                 )
             )
         )
 
-        # ==========================================
-        # 1000 FT TARGET ZONE
-        # ==========================================
+        # =====================================================
+        # 12) 20 FT TARGET ZONE
+        # =====================================================
 
         if abs(
             altitude_error
         ) < 3.0:
 
+            # 17-23 ft aralığına girdi.
             reward += 10.0
 
+            # Hedefte dikey hız 0'a yaklaşmalı.
             reward -= (
                 1.0
                 * abs(
@@ -701,12 +782,18 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
+            # ---------------------------------------------
+            # HOLD CONDITIONS
+            # ---------------------------------------------
+
             if (
                 abs(vertical_speed) < 2.0
                 and abs(pitch) < 0.20
                 and abs(roll) < 0.20
                 and abs(roll_rate) < 0.10
                 and abs(pitch_rate) < 0.10
+                and abs(forward_velocity) < 5.0
+                and abs(lateral_velocity) < 5.0
             ):
 
                 self.target_hold_steps += 1
@@ -721,9 +808,9 @@ class HelicopterEnv(gym.Env):
 
             self.target_hold_steps = 0
 
-        # ==========================================
+        # =====================================================
         # SUCCESS
-        # ==========================================
+        # =====================================================
 
         if (
             self.target_hold_steps
@@ -736,17 +823,21 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
-        # ==========================================
+        # =====================================================
         # SAFETY
-        # ==========================================
+        # =====================================================
 
-        if abs(pitch) > 1.2:
+        if abs(
+            pitch
+        ) > 1.2:
 
             reward -= 150.0
 
             terminated = True
 
-        if abs(roll) > 1.2:
+        if abs(
+            roll
+        ) > 1.2:
 
             reward -= 150.0
 
@@ -776,18 +867,18 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
-        # ==========================================
+        # =====================================================
         # TIME LIMIT
-        # ==========================================
+        # =====================================================
 
         truncated = (
             self.steps
             >= self.max_steps
         )
 
-        # ==========================================
+        # =====================================================
         # INFO
-        # ==========================================
+        # =====================================================
 
         info = {
 
@@ -799,6 +890,9 @@ class HelicopterEnv(gym.Env):
 
             "forward_velocity":
                 forward_velocity,
+
+            "lateral_velocity":
+                lateral_velocity,
 
             "vertical_speed":
                 vertical_speed,
@@ -870,9 +964,9 @@ class HelicopterEnv(gym.Env):
             info
         )
 
-    # ==========================================
+    # =========================================================
     # CLOSE
-    # ==========================================
+    # =========================================================
 
     def close(self):
 
