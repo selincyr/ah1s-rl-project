@@ -1,18 +1,23 @@
 from stable_baselines3 import PPO
+
 from helicopter_env_1 import HelicopterEnv
 
 
 def main():
 
-    print("Takeoff-straight training baslatiliyor...")
+    print(
+        "Takeoff-hover training baslatiliyor..."
+    )
 
-    # ==========================================
+    # =====================================================
     # ENVIRONMENT
-    # ==========================================
+    # =====================================================
 
     env = HelicopterEnv()
 
-    print("Environment olusturuldu.")
+    print(
+        "Environment olusturuldu."
+    )
 
     print(
         "Observation space:",
@@ -24,9 +29,9 @@ def main():
         env.action_space.shape
     )
 
-    # ==========================================
+    # =====================================================
     # PPO MODEL
-    # ==========================================
+    # =====================================================
 
     model = PPO(
         "MlpPolicy",
@@ -43,33 +48,39 @@ def main():
         verbose=1
     )
 
-    print("PPO model olusturuldu.")
-
-    # ==========================================
-    # TRAIN
-    # ==========================================
-
-    model.learn(
-        total_timesteps=30_000
+    print(
+        "PPO model olusturuldu."
     )
 
-    # ==========================================
-    # SAVE
-    # ==========================================
+    # =====================================================
+    # TRAINING
+    # =====================================================
+
+    model.learn(
+        total_timesteps=50_000
+    )
+
+    # =====================================================
+    # SAVE MODEL
+    # =====================================================
 
     model.save(
-        "ppo_ah1s_takeoff_straight"
+        "ppo_ah1s_takeoff_hover"
     )
 
     env.close()
 
+    print()
     print(
         "Training tamamlandi."
     )
 
     print(
-        "Model kaydedildi: "
-        "ppo_ah1s_takeoff_straight.zip"
+        "Model kaydedildi:"
+    )
+
+    print(
+        "ppo_ah1s_takeoff_hover.zip"
     )
 
 
