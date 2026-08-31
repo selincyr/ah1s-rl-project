@@ -6,14 +6,7 @@ from stable_baselines3 import PPO
 from helicopter_env_1 import HelicopterEnv
 
 
-# =========================================================
-# HELIKOPTER GÖVDESI
-# =========================================================
-
 def create_helicopter():
-
-    # Basit fakat yönü anlaşılır bir gövde.
-    # X ekseni burun-kuyruk yönü.
 
     vertices = np.array([
         [-3.0, -1.5, -0.8],
@@ -28,28 +21,13 @@ def create_helicopter():
     ])
 
     edges = [
-        (0, 1),
-        (1, 2),
-        (2, 3),
-        (3, 0),
-
-        (4, 5),
-        (5, 6),
-        (6, 7),
-        (7, 4),
-
-        (0, 4),
-        (1, 5),
-        (2, 6),
-        (3, 7)
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7)
     ]
 
     return vertices, edges
 
-
-# =========================================================
-# ROTATION MATRIX
-# =========================================================
 
 def rotation_matrix(roll, pitch, yaw):
 
@@ -80,32 +58,16 @@ def rotation_matrix(roll, pitch, yaw):
         [0, 0, 1]
     ])
 
-    return (
-        yaw_matrix
-        @ pitch_matrix
-        @ roll_matrix
-    )
+    return yaw_matrix @ pitch_matrix @ roll_matrix
 
-
-# =========================================================
-# MAIN
-# =========================================================
 
 def main():
 
     print("Visualization baslatiliyor...")
 
-    # -----------------------------------------------------
-    # ENVIRONMENT
-    # -----------------------------------------------------
-
     env = HelicopterEnv()
 
     print("Environment olusturuldu.")
-
-    # -----------------------------------------------------
-    # TAKEOFF-ONLY PPO MODEL
-    # -----------------------------------------------------
 
     model = PPO.load(
         "ppo_ah1s_takeoff_only",
@@ -117,10 +79,6 @@ def main():
     obs, info = env.reset()
 
     print("Environment reset tamamlandi.")
-
-    # -----------------------------------------------------
-    # VERI LISTELERI
-    # -----------------------------------------------------
 
     positions = []
 
@@ -135,22 +93,10 @@ def main():
 
     hold_steps = []
 
-    # -----------------------------------------------------
-    # BASLANGIC KONUMU
-    # -----------------------------------------------------
-
     x = 0.0
     y = 0.0
 
-    # 10 JSBSim physics step:
-    #
-    # 10 * 0.0075 = 0.075 saniye
-
     dt = 0.075
-
-    # =====================================================
-    # SIMULASYON
-    # =====================================================
 
     for step in range(600):
 
@@ -163,13 +109,7 @@ def main():
             action
         )
 
-        # ---------------------------------------------
-        # BODY VELOCITIES
-        # ---------------------------------------------
-
-        u = info[
-            "forward_velocity"
-        ]
+        u = info["forward_velocity"]
 
         v = float(
             env.fdm[
@@ -177,13 +117,7 @@ def main():
             ]
         )
 
-        heading = info[
-            "heading"
-        ]
-
-        # ---------------------------------------------
-        # APPROXIMATE XY POSITION
-        # ---------------------------------------------
+        heading = info["heading"]
 
         dx = (
             u * np.cos(heading)
@@ -198,20 +132,10 @@ def main():
         x += dx
         y += dy
 
-        altitude = info[
-            "altitude"
-        ]
-
-        # ---------------------------------------------
-        # SAVE DATA
-        # ---------------------------------------------
+        altitude = info["altitude"]
 
         positions.append(
-            [
-                x,
-                y,
-                altitude
-            ]
+            [x, y, altitude]
         )
 
         rolls.append(
@@ -244,40 +168,18 @@ def main():
 
         if terminated or truncated:
 
-            print(
-                "Episode bitti."
-            )
-
-            print(
-                "Success:",
-                info["success"]
-            )
-
-            print(
-                "Final altitude:",
-                info["altitude"]
-            )
-
-            print(
-                "Final hold:",
-                info["target_hold_steps"]
-            )
+            print("Episode bitti.")
+            print("Success:", info["success"])
+            print("Final altitude:", info["altitude"])
+            print("Final hold:", info["target_hold_steps"])
 
             break
 
     env.close()
 
-    # -----------------------------------------------------
-    # NUMPY
-    # -----------------------------------------------------
-
     positions = np.array(
         positions
     )
-
-    # =====================================================
-    # FIGURE
-    # =====================================================
 
     vertices, edges = create_helicopter()
 
@@ -285,7 +187,6 @@ def main():
         figsize=(12, 8)
     )
 
-    # Grafiğe sağ tarafta bilgi paneli için yer bırak.
     fig.subplots_adjust(
         left=0.05,
         right=0.72,
@@ -298,26 +199,21 @@ def main():
         projection="3d"
     )
 
-    # =====================================================
-    # AXIS LIMITS
-    # =====================================================
-
     x_min = positions[:, 0].min()
     x_max = positions[:, 0].max()
 
     y_min = positions[:, 1].min()
     y_max = positions[:, 1].max()
 
-    # Çok dar eksen oluşmasını engelle.
-
+    # Daha geniş sahne
     x_range = max(
-        x_max - x_min,
-        40.0
+        x_max - x_min + 40.0,
+        100.0
     )
 
     y_range = max(
-        y_max - y_min,
-        40.0
+        y_max - y_min + 40.0,
+        100.0
     )
 
     x_center = (
@@ -338,23 +234,16 @@ def main():
         y_center + y_range / 2
     )
 
-    # Takeoff-only görev:
-    # hedef 20 ft.
-    # Görselde 0-40 ft yeterli.
-
+    # Daha ferah dikey alan
     z_max = max(
-        40.0,
-        positions[:, 2].max() + 5.0
+        50.0,
+        positions[:, 2].max() + 10.0
     )
 
     ax.set_zlim(
         0,
         z_max
     )
-
-    # =====================================================
-    # LABELS
-    # =====================================================
 
     ax.set_xlabel(
         "X - Forward (ft)",
@@ -376,13 +265,9 @@ def main():
         pad=20
     )
 
-    # =====================================================
-    # TARGET ALTITUDE PLANE / LINE
-    # =====================================================
-
     target_altitude = 20.0
 
-    target_line, = ax.plot(
+    ax.plot(
         [
             x_center - x_range / 2,
             x_center + x_range / 2
@@ -404,20 +289,12 @@ def main():
         loc="lower left"
     )
 
-    # =====================================================
-    # FLIGHT TRAIL
-    # =====================================================
-
     trail, = ax.plot(
         [],
         [],
         [],
         linewidth=2
     )
-
-    # =====================================================
-    # HELICOPTER BODY
-    # =====================================================
 
     body_lines = []
 
@@ -434,10 +311,6 @@ def main():
             line
         )
 
-    # =====================================================
-    # NOSE DIRECTION LINE
-    # =====================================================
-
     nose_line, = ax.plot(
         [],
         [],
@@ -445,23 +318,12 @@ def main():
         linewidth=4
     )
 
-    # =====================================================
-    # ROTOR LINE
-    # =====================================================
-
     rotor_line, = ax.plot(
         [],
         [],
         [],
         linewidth=3
     )
-
-    # =====================================================
-    # INFO PANEL
-    # =====================================================
-
-    # Grafiğin üstüne değil, FIGURE'ın sağ tarafına yazıyoruz.
-    # Böylece title ile çakışmayacak.
 
     info_text = fig.text(
         0.75,
@@ -472,7 +334,7 @@ def main():
         family="monospace"
     )
 
-    explanation_text = fig.text(
+    fig.text(
         0.75,
         0.34,
 
@@ -490,27 +352,13 @@ def main():
         family="monospace"
     )
 
-    # =====================================================
-    # UPDATE
-    # =====================================================
-
     def update(frame):
 
-        position = positions[
-            frame
-        ]
+        position = positions[frame]
 
-        roll = rolls[
-            frame
-        ]
-
-        pitch = pitches[
-            frame
-        ]
-
-        yaw = headings[
-            frame
-        ]
+        roll = rolls[frame]
+        pitch = pitches[frame]
+        yaw = headings[frame]
 
         rotation = rotation_matrix(
             roll,
@@ -518,42 +366,19 @@ def main():
             yaw
         )
 
-        # -------------------------------------------------
-        # BODY ROTATION
-        # -------------------------------------------------
-
         rotated_vertices = (
             vertices
             @ rotation.T
         )
 
-        # MODEL BÜYÜKLÜĞÜ
-        #
-        # Burayı özellikle büyük tutuyoruz.
-        #
-        # Eski 5.0 yerine 25.0.
+        # Küp artık daha dengeli büyüklükte
+        body_scale = 8.0
 
-        body_scale = 25.0
+        rotated_vertices *= body_scale
 
-        rotated_vertices *= (
-            body_scale
-        )
-
-        rotated_vertices[:, 0] += (
-            position[0]
-        )
-
-        rotated_vertices[:, 1] += (
-            position[1]
-        )
-
-        rotated_vertices[:, 2] += (
-            position[2]
-        )
-
-        # -------------------------------------------------
-        # BODY EDGES
-        # -------------------------------------------------
+        rotated_vertices[:, 0] += position[0]
+        rotated_vertices[:, 1] += position[1]
+        rotated_vertices[:, 2] += position[2]
 
         for line, edge in zip(
             body_lines,
@@ -569,28 +394,13 @@ def main():
             ]
 
             line.set_data(
-                [
-                    p1[0],
-                    p2[0]
-                ],
-                [
-                    p1[1],
-                    p2[1]
-                ]
+                [p1[0], p2[0]],
+                [p1[1], p2[1]]
             )
 
             line.set_3d_properties(
-                [
-                    p1[2],
-                    p2[2]
-                ]
+                [p1[2], p2[2]]
             )
-
-        # -------------------------------------------------
-        # NOSE INDICATOR
-        # -------------------------------------------------
-
-        # Gövdenin +X yönünü burun kabul ediyoruz.
 
         nose_local = np.array([
             [0.0, 0.0, 0.0],
@@ -602,21 +412,11 @@ def main():
             @ rotation.T
         )
 
-        nose_world *= (
-            body_scale
-        )
+        nose_world *= body_scale
 
-        nose_world[:, 0] += (
-            position[0]
-        )
-
-        nose_world[:, 1] += (
-            position[1]
-        )
-
-        nose_world[:, 2] += (
-            position[2]
-        )
+        nose_world[:, 0] += position[0]
+        nose_world[:, 1] += position[1]
+        nose_world[:, 2] += position[2]
 
         nose_line.set_data(
             nose_world[:, 0],
@@ -626,10 +426,6 @@ def main():
         nose_line.set_3d_properties(
             nose_world[:, 2]
         )
-
-        # -------------------------------------------------
-        # MAIN ROTOR
-        # -------------------------------------------------
 
         rotor_local = np.array([
             [0.0, -5.0, 1.0],
@@ -641,21 +437,11 @@ def main():
             @ rotation.T
         )
 
-        rotor_world *= (
-            body_scale
-        )
+        rotor_world *= body_scale
 
-        rotor_world[:, 0] += (
-            position[0]
-        )
-
-        rotor_world[:, 1] += (
-            position[1]
-        )
-
-        rotor_world[:, 2] += (
-            position[2]
-        )
+        rotor_world[:, 0] += position[0]
+        rotor_world[:, 1] += position[1]
+        rotor_world[:, 2] += position[2]
 
         rotor_line.set_data(
             rotor_world[:, 0],
@@ -666,31 +452,14 @@ def main():
             rotor_world[:, 2]
         )
 
-        # -------------------------------------------------
-        # TRAIL
-        # -------------------------------------------------
-
         trail.set_data(
-            positions[
-                :frame + 1,
-                0
-            ],
-            positions[
-                :frame + 1,
-                1
-            ]
+            positions[:frame + 1, 0],
+            positions[:frame + 1, 1]
         )
 
         trail.set_3d_properties(
-            positions[
-                :frame + 1,
-                2
-            ]
+            positions[:frame + 1, 2]
         )
-
-        # -------------------------------------------------
-        # INFO
-        # -------------------------------------------------
 
         info_text.set_text(
 
@@ -724,13 +493,6 @@ def main():
             ]
         )
 
-    # =====================================================
-    # ANIMATION
-    # =====================================================
-
-    # Her fizik/RL frame'ini GIF'e koymak çok yavaş.
-    # 5 step'te bir frame alıyoruz.
-
     frame_indices = range(
         0,
         len(positions),
@@ -744,10 +506,6 @@ def main():
         interval=100,
         blit=False
     )
-
-    # =====================================================
-    # SAVE
-    # =====================================================
 
     print(
         "GIF olusturuluyor..."
@@ -769,10 +527,6 @@ def main():
         "takeoff_visualization.gif olusturuldu."
     )
 
-
-# =========================================================
-# START
-# =========================================================
 
 if __name__ == "__main__":
     main()
