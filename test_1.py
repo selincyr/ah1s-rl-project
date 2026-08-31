@@ -8,7 +8,7 @@ def main():
     env = HelicopterEnv()
 
     model = PPO.load(
-        "ppo_ah1s_task1_rates",
+        "ppo_ah1s_takeoff_only",
         env=env
     )
 
@@ -57,12 +57,12 @@ def main():
 
             print(
                 f"Step: {step:4d} | "
-                f"Altitude: {info['altitude']:8.2f} ft | "
-                f"VSpeed: {info['vertical_speed']:7.2f} ft/s | "
-                f"Velocity: {info['forward_velocity']:7.2f} ft/s | "
+                f"Altitude: {info['altitude']:6.2f} ft | "
+                f"VSpeed: {info['vertical_speed']:6.2f} ft/s | "
+                f"Velocity: {info['forward_velocity']:6.2f} ft/s | "
                 f"Pitch: {info['pitch']:6.3f} | "
                 f"Roll: {info['roll']:6.3f} | "
-                f"Collective: {info['collective']:.3f} | "
+                f"Collective: {info['collective']:5.3f} | "
                 f"Hold: {info['target_hold_steps']:3d}"
                 f"RollRate: {info['roll_rate']:6.3f} | "
                 f"PitchRate: {info['pitch_rate']:6.3f} | "
