@@ -132,6 +132,8 @@ class HelicopterEnv(gym.Env):
 
         self.previous_altitude = None
 
+        self.previous_altitude_error = None
+
         self.fdm = None
 
         # =====================================================
@@ -309,6 +311,11 @@ class HelicopterEnv(gym.Env):
 
         self.previous_altitude = float(
             obs[0]
+        )
+
+        self.previous_altitude_error = abs(
+            self.target_altitude
+            - float(obs[0])
         )
 
         info = {
@@ -578,32 +585,52 @@ class HelicopterEnv(gym.Env):
         success = False
 
         # =====================================================
-        # 1) ALTITUDE PROGRESS
+        # 1) HEDEFE YAKLASMA REWARD
         # =====================================================
+        #
+        # 20 ft hedefine yaklaşmak ödüllendirilir,
+        # hedeften uzaklaşmak cezalandırılır.
+        #
+
+        current_altitude_error = abs(
+            self.target_altitude
+            - altitude
+        )
+
+        error_improvement = (
+            self.previous_altitude_error
+            - current_altitude_error
+        )
 
         reward += (
-            2.0
-            * altitude_progress
+            10.0
+            * error_improvement
+        )
+
+        self.previous_altitude_error = (
+            current_altitude_error
         )
 
         # =====================================================
-        # 2) YERDE BEKLEME CEZASI
-        # =====================================================
-
-        if altitude < 10.0:
-
-            reward -= 1.0
-
-        # =====================================================
-        # 3) ALTITUDE TARGET ERROR
+        # 2) HEDEFTEN UZAKLIK CEZASI
         # =====================================================
 
         reward -= (
-            0.001
-            * abs(
-                altitude_error
-            )
+            0.10
+            * current_altitude_error
         )
+
+        # =====================================================
+        # 3) YERDE KALMA CEZASI
+        # =====================================================
+        #
+        # PPO'nun "hiç kalkmamak" çözümünü seçmesini
+        # önlemek için yerde kalma cezasını güçlendiriyoruz.
+        #
+
+        if altitude < 8.0:
+
+            reward -= 4.0
 
         # =====================================================
         # 4) CLIMB RATE
@@ -885,6 +912,23 @@ class HelicopterEnv(gym.Env):
         ):
 
             reward -= 150.0
+
+            terminated = True
+
+        # =====================================================
+        # FAILED TAKEOFF
+        # =====================================================
+        #
+        # Yaklaşık 11 saniye içinde 8 ft üzerine çıkamıyorsa
+        # kalkış denemesi başarısız kabul edilir.
+        #
+
+        if (
+            self.steps > 150
+            and altitude < 8.0
+        ):
+
+            reward -= 100.0
 
             terminated = True
 
