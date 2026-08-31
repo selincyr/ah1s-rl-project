@@ -308,7 +308,7 @@ class HelicopterEnv(gym.Env):
 
         if self.phase == "CLIMB":
 
-            return 15.0
+            return 12.0
 
         # -----------------------------------------------------
         # APPROACH
@@ -329,14 +329,14 @@ class HelicopterEnv(gym.Env):
             )
 
             target_rate = (
-                remaining / 10.0
+                remaining / 20.0
             )
 
             return float(
                 np.clip(
                     target_rate,
-                    3.0,
-                    15.0
+                    1.5,
+                    8.0
                 )
             )
 
@@ -831,7 +831,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            0.25
+            0.60
             * abs(
                 forward_velocity
             )
@@ -842,7 +842,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            0.30
+            0.70
             * abs(
                 lateral_velocity
             )
@@ -853,7 +853,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            3.0
+            6.0
             * abs(
                 heading_error
             )
@@ -864,14 +864,14 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            4.0
+            8.0
             * abs(
                 pitch
             )
         )
 
         reward -= (
-            4.0
+            10.0
             * abs(
                 roll
             )
@@ -957,12 +957,18 @@ class HelicopterEnv(gym.Env):
         if altitude > 1030.0:
 
             reward -= (
-                1.5
+                5.0
                 * (
                     altitude
                     - 1030.0
                 )
             )
+
+        if altitude > 1080.0:
+            
+            reward -= 500.0
+            
+            terminated = True
 
         # =====================================================
         # 14) TARGET ALTITUDE ZONE
@@ -1039,9 +1045,9 @@ class HelicopterEnv(gym.Env):
 
         if abs(
             pitch
-        ) > 1.2:
+        ) >0.70:
 
-            reward -= 250.0
+            reward -= 300.0
 
             terminated = True
 
@@ -1051,9 +1057,22 @@ class HelicopterEnv(gym.Env):
 
         if abs(
             roll
-        ) > 1.2:
+        ) > 0.70:
 
-            reward -= 250.0
+            reward -= 300.0
+
+            terminated = True
+
+        # =====================================================
+        # SAFETY - EXCESSIVE HORIZONTAL SPEED
+        # =====================================================
+
+        if (
+            abs(forward_velocity) > 50.0
+            or abs(lateral_velocity) > 35.0
+        ):
+
+            reward -= 300.0
 
             terminated = True
 
