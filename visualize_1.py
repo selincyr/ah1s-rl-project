@@ -70,7 +70,7 @@ def main():
     print("Environment olusturuldu.")
 
     model = PPO.load(
-        "ppo_ah1s_takeoff_v3",
+        "ppo_ah1s_takeoff_v5",
         env=env
     )
 
@@ -111,11 +111,7 @@ def main():
 
         u = info["forward_velocity"]
 
-        v = float(
-            env.fdm[
-                "velocities/v-aero-fps"
-            ]
-        )
+        v = info["lateral_velocity"]
 
         heading = info["heading"]
 
@@ -261,7 +257,7 @@ def main():
     )
 
     ax.set_title(
-        "AH-1S Takeoff-Only Flight Visualization",
+        "AH-1S PPO Takeoff + Hover Visualization",
         pad=20
     )
 
