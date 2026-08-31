@@ -46,7 +46,7 @@ def main():
     # =====================================================
 
     model.save(
-        "ppo_ah1s_takeoff_v3"
+        "ppo_ah1s_takeoff_v5"
     )
 
     env.close()
