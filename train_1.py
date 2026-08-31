@@ -5,9 +5,7 @@ from helicopter_env_1 import HelicopterEnv
 
 def main():
 
-    print(
-        "Takeoff-hover training baslatiliyor..."
-    )
+    print("Takeoff-v2 training baslatiliyor...")
 
     # =====================================================
     # ENVIRONMENT
@@ -15,19 +13,9 @@ def main():
 
     env = HelicopterEnv()
 
-    print(
-        "Environment olusturuldu."
-    )
-
-    print(
-        "Observation space:",
-        env.observation_space.shape
-    )
-
-    print(
-        "Action space:",
-        env.action_space.shape
-    )
+    print("Environment olusturuldu.")
+    print("Observation space:", env.observation_space.shape)
+    print("Action space:", env.action_space.shape)
 
     # =====================================================
     # PPO MODEL
@@ -36,21 +24,14 @@ def main():
     model = PPO(
         "MlpPolicy",
         env,
-
         learning_rate=3e-4,
-
         gamma=0.99,
-
         n_steps=1024,
-
         batch_size=64,
-
         verbose=1
     )
 
-    print(
-        "PPO model olusturuldu."
-    )
+    print("PPO model olusturuldu.")
 
     # =====================================================
     # TRAINING
@@ -61,27 +42,18 @@ def main():
     )
 
     # =====================================================
-    # SAVE MODEL
+    # SAVE
     # =====================================================
 
     model.save(
-        "ppo_ah1s_takeoff_hover"
+        "ppo_ah1s_takeoff_v2"
     )
 
     env.close()
 
     print()
-    print(
-        "Training tamamlandi."
-    )
-
-    print(
-        "Model kaydedildi:"
-    )
-
-    print(
-        "ppo_ah1s_takeoff_hover.zip"
-    )
+    print("Training tamamlandi.")
+    print("Model: ppo_ah1s_takeoff_v2.zip")
 
 
 if __name__ == "__main__":
