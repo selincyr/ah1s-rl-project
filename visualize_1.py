@@ -70,7 +70,7 @@ def main():
     print("Environment olusturuldu.")
 
     model = PPO.load(
-        "ppo_ah1s_takeoff_only",
+        "ppo_ah1s_takeoff_v3",
         env=env
     )
 
