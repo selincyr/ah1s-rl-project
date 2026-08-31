@@ -17,17 +17,17 @@ def main():
     )
 
     model.learn(
-        total_timesteps=50_000
+        total_timesteps=30_000
     )
 
     model.save(
-        "ppo_ah1s_task1_rates"
+        "ppo_ah1s_takeoff_only"
     )
 
     env.close()
 
     print(
-        "Task 1 rate-aware training tamamlandı."
+        "Takeoff only training tamamlandı."
     )
 
 
