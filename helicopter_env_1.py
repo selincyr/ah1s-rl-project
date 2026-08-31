@@ -100,9 +100,9 @@ class HelicopterEnv(gym.Env):
         # TASK 1
         # ==========================================
 
-        self.target_altitude = 1000.0
+        self.target_altitude = 30.0
 
-        self.target_climb_rate = 15.0
+        self.target_climb_rate = 5.0
 
         self.target_heading = None
 
@@ -505,7 +505,7 @@ class HelicopterEnv(gym.Env):
         # ==========================================
 
         reward += (
-            4.0
+            2.0
             * altitude_progress
         )
 
@@ -533,8 +533,8 @@ class HelicopterEnv(gym.Env):
         # ==========================================
 
         if (
-            altitude > 15.0
-            and altitude < 950.0
+            altitude > 7.0
+            and altitude < 17.0
         ):
 
             climb_rate_error = (
@@ -543,7 +543,7 @@ class HelicopterEnv(gym.Env):
             )
 
             reward -= (
-                0.10
+                0.15
                 * abs(
                     climb_rate_error
                 )
@@ -553,23 +553,23 @@ class HelicopterEnv(gym.Env):
         # 5) AŞIRI DİKEY HIZ
         # ==========================================
 
-        if vertical_speed > 25.0:
+        if vertical_speed > 10.0:
 
             reward -= (
                 2.0
                 * (
                     vertical_speed
-                    - 25.0
+                    - 10.0
                 )
             )
 
-        if vertical_speed < -15.0:
+        if vertical_speed < -5.0:
 
             reward -= (
                 2.0
                 * abs(
                     vertical_speed
-                    + 15.0
+                    + 5.0
                 )
             )
 
@@ -578,7 +578,7 @@ class HelicopterEnv(gym.Env):
         # ==========================================
 
         reward -= (
-            0.05
+            0.10
             * abs(
                 forward_velocity
             )
@@ -586,9 +586,9 @@ class HelicopterEnv(gym.Env):
 
         # 70 ft/s üzerinde ek ceza
 
-        if abs(
-            forward_velocity
-        ) > 70.0:
+       # if abs(
+       #     forward_velocity
+       # ) > 70.0:
 
             reward -= (
                 0.20
@@ -605,7 +605,7 @@ class HelicopterEnv(gym.Env):
         # ==========================================
 
         reward -= (
-            1.5
+            0.5
             * abs(
                 heading_error
             )
@@ -616,14 +616,14 @@ class HelicopterEnv(gym.Env):
         # ==========================================
 
         reward -= (
-            6.0
+            5.0
             * abs(
                 pitch
             )
         )
 
         reward -= (
-            8.0
+            5.0
             * abs(
                 roll
             )
@@ -690,23 +690,23 @@ class HelicopterEnv(gym.Env):
 
         if abs(
             altitude_error
-        ) < 30.0:
+        ) < 3.0:
 
             reward += 10.0
 
             reward -= (
-                0.2
+                1.0
                 * abs(
                     vertical_speed
                 )
             )
 
             if (
-                abs(vertical_speed) < 8.0
-                and abs(pitch) < 0.25
-                and abs(roll) < 0.25
-                and abs(roll_rate) < 0.15
-                and abs(pitch_rate) < 0.15
+                abs(vertical_speed) < 2.0
+                and abs(pitch) < 0.20
+                and abs(roll) < 0.20
+                and abs(roll_rate) < 0.10
+                and abs(pitch_rate) < 0.10
             ):
 
                 self.target_hold_steps += 1
@@ -758,7 +758,7 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
-        if altitude > 1500.0:
+        if altitude > 40.0:
 
             reward -= 150.0
 
