@@ -1,30 +1,32 @@
 from stable_baselines3 import PPO
 from helicopter_env_1 import HelicopterEnv
-import matplotlib.pyplot as plt
 
 
 def main():
 
+    print("Takeoff-straight test baslatiliyor...")
+
     env = HelicopterEnv()
 
     model = PPO.load(
-        "ppo_ah1s_takeoff_only",
+        "ppo_ah1s_takeoff_straight",
         env=env
     )
 
     obs, info = env.reset()
 
-    print("\nTASK 1 TAKEOFF TEST BASLADI")
-    print("----------------------------")
+    print("Model yuklendi.")
+    print("Test basladi.")
+    print()
 
-    total_reward = 0.0
+    max_altitude = info["altitude"]
 
-    altitudes = []
-    vertical_speeds = []
-    collectives = []
-    steps_list = []
+    max_abs_x_velocity = 0.0
+    max_abs_y_velocity = 0.0
 
-    for step in range(5000):
+    max_hold = 0
+
+    for step in range(1000):
 
         action, _ = model.predict(
             obs,
@@ -35,157 +37,151 @@ def main():
             action
         )
 
-        total_reward += reward
+        altitude = info["altitude"]
 
-        altitudes.append(
-            info["altitude"]
+        forward_velocity = info[
+            "forward_velocity"
+        ]
+
+        lateral_velocity = info[
+            "lateral_velocity"
+        ]
+
+        vertical_speed = info[
+            "vertical_speed"
+        ]
+
+        roll = info["roll"]
+
+        pitch = info["pitch"]
+
+        heading_error = info[
+            "heading_error"
+        ]
+
+        roll_rate = info[
+            "roll_rate"
+        ]
+
+        pitch_rate = info[
+            "pitch_rate"
+        ]
+
+        hold = info[
+            "target_hold_steps"
+        ]
+
+        max_altitude = max(
+            max_altitude,
+            altitude
         )
 
-        vertical_speeds.append(
-            info["vertical_speed"]
+        max_abs_x_velocity = max(
+            max_abs_x_velocity,
+            abs(forward_velocity)
         )
 
-        collectives.append(
-            info["collective"]
+        max_abs_y_velocity = max(
+            max_abs_y_velocity,
+            abs(lateral_velocity)
         )
 
-        steps_list.append(
-            step
+        max_hold = max(
+            max_hold,
+            hold
         )
 
+        # Her 20 stepte bir yazdır.
         if step % 20 == 0:
 
             print(
                 f"Step: {step:4d} | "
-                f"Altitude: {info['altitude']:6.2f} ft | "
-                f"VSpeed: {info['vertical_speed']:6.2f} ft/s | "
-                f"Velocity: {info['forward_velocity']:6.2f} ft/s | "
-                f"Pitch: {info['pitch']:6.3f} | "
-                f"Roll: {info['roll']:6.3f} | "
-                f"Collective: {info['collective']:5.3f} | "
-                f"Hold: {info['target_hold_steps']:3d}"
-                f"RollRate: {info['roll_rate']:6.3f} | "
-                f"PitchRate: {info['pitch_rate']:6.3f} | "
+                f"Alt: {altitude:6.2f} ft | "
+                f"VSpeed: {vertical_speed:6.2f} | "
+                f"Forward: {forward_velocity:6.2f} | "
+                f"Lateral: {lateral_velocity:6.2f} | "
+                f"Roll: {roll:6.3f} | "
+                f"Pitch: {pitch:6.3f} | "
+                f"HeadErr: {heading_error:6.3f} | "
+                f"Hold: {hold:3d}"
             )
 
         if terminated or truncated:
 
-            print("\nEpisode bitti.")
+            print()
+            print("Episode bitti.")
 
             print(
                 "Success:",
                 info["success"]
             )
 
-            print(
-                "Son altitude:",
-                info["altitude"]
-            )
-
-            print(
-                "Son vertical speed:",
-                info["vertical_speed"]
-            )
-
-            print(
-                "Toplam reward:",
-                total_reward
-            )
-
-            print(
-                "Toplam step:",
-                step + 1
-            )
-
             break
 
+    print()
+    print("============= TEST OZETI =============")
+
+    print(
+        f"Max altitude: {max_altitude:.2f} ft"
+    )
+
+    print(
+        f"Max |Forward velocity|: "
+        f"{max_abs_x_velocity:.2f} ft/s"
+    )
+
+    print(
+        f"Max |Lateral velocity|: "
+        f"{max_abs_y_velocity:.2f} ft/s"
+    )
+
+    print(
+        f"Max hold: {max_hold} / 50"
+    )
+
+    print(
+        f"Final altitude: "
+        f"{info['altitude']:.2f} ft"
+    )
+
+    print(
+        f"Final forward velocity: "
+        f"{info['forward_velocity']:.2f} ft/s"
+    )
+
+    print(
+        f"Final lateral velocity: "
+        f"{info['lateral_velocity']:.2f} ft/s"
+    )
+
+    print(
+        f"Final vertical speed: "
+        f"{info['vertical_speed']:.2f} ft/s"
+    )
+
+    print(
+        f"Final roll: "
+        f"{info['roll']:.3f} rad"
+    )
+
+    print(
+        f"Final pitch: "
+        f"{info['pitch']:.3f} rad"
+    )
+
+    print(
+        f"Final heading error: "
+        f"{info['heading_error']:.3f} rad"
+    )
+
+    print(
+        f"Success: "
+        f"{info['success']}"
+    )
+
+    print("======================================")
+
     env.close()
-
-    # ==========================================
-    # ALTITUDE GRAFIGI
-    # ==========================================
-
-    plt.figure()
-
-    plt.plot(
-        steps_list,
-        altitudes
-    )
-
-    plt.axhline(
-        y=1000,
-        linestyle="--"
-    )
-
-    plt.xlabel(
-        "RL Step"
-    )
-
-    plt.ylabel(
-        "Altitude AGL (ft)"
-    )
-
-    plt.title(
-        "Task 1 - Altitude"
-    )
-
-    plt.grid()
-
-    plt.show()
-
-    # ==========================================
-    # VERTICAL SPEED GRAFIGI
-    # ==========================================
-
-    plt.figure()
-
-    plt.plot(
-        steps_list,
-        vertical_speeds
-    )
-
-    plt.xlabel(
-        "RL Step"
-    )
-
-    plt.ylabel(
-        "Vertical Speed (ft/s)"
-    )
-
-    plt.title(
-        "Task 1 - Vertical Speed"
-    )
-
-    plt.grid()
-
-    plt.show()
-
-    # ==========================================
-    # COLLECTIVE GRAFIGI
-    # ==========================================
-
-    plt.figure()
-
-    plt.plot(
-        steps_list,
-        collectives
-    )
-
-    plt.xlabel(
-        "RL Step"
-    )
-
-    plt.ylabel(
-        "Collective"
-    )
-
-    plt.title(
-        "Task 1 - Collective"
-    )
-
-    plt.grid()
-
-    plt.show()
 
 
 if __name__ == "__main__":
