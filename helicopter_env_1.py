@@ -54,7 +54,7 @@ class HelicopterEnv(gym.Env):
         #
         # 0  = altitude AGL
         # 1  = forward velocity
-        # 2  = lateral velocity       <-- YENİ
+        # 2  = lateral velocity
         # 3  = vertical speed
         # 4  = heading
         # 5  = pitch
@@ -69,17 +69,17 @@ class HelicopterEnv(gym.Env):
 
             low=np.array(
                 [
-                    -1000,        # altitude
-                    -500,         # forward velocity
-                    -500,         # lateral velocity
-                    -500,         # vertical speed
-                    0.0,          # heading
-                    -np.pi / 2,   # pitch
-                    -np.pi,       # roll
-                    -20,          # roll rate
-                    -20,          # pitch rate
-                    -20,          # yaw rate
-                    0             # rotor RPM
+                    -1000,
+                    -500,
+                    -500,
+                    -500,
+                    0.0,
+                    -np.pi / 2,
+                    -np.pi,
+                    -20,
+                    -20,
+                    -20,
+                    0
                 ],
                 dtype=np.float32
             ),
@@ -108,9 +108,11 @@ class HelicopterEnv(gym.Env):
         # TAKEOFF-ONLY TASK
         # =====================================================
 
-        # Yerde AGL yaklaşık 6.3 ft.
-        # İlk curriculum hedefimiz sadece 20 ft'e
-        # dikeye yakın kalkmak ve orada stabil kalmak.
+        # Helikopter yerde yaklaşık 6.3 ft AGL'de başlıyor.
+        # İlk hedef:
+        #
+        # 20 ft AGL'e dikeye yakın kalk
+        # ve orada stabil kal.
 
         self.target_altitude = 20.0
 
@@ -135,26 +137,38 @@ class HelicopterEnv(gym.Env):
         # =====================================================
         # BASE CONTROL
         # =====================================================
+        #
+        # AH-1S'in 0 knot / 20 ft civarındaki
+        # steady-flight trim değerlerine yakın değerler.
+        #
+        # PPO bu değerlerin çevresinde residual kontrol yapacak.
+        #
 
-        self.base_collective = 0.615
+        self.base_collective = 0.560
 
-        self.base_elevator = -0.18
+        self.base_elevator = -0.223
 
-        self.base_aileron = 0.22
+        self.base_aileron = 0.240
 
-        self.base_rudder = 0.39
+        self.base_rudder = 0.386
 
         # =====================================================
         # RESIDUAL CONTROL SCALE
         # =====================================================
+        #
+        # Collective kalkış için daha geniş tutuluyor.
+        #
+        # Elevator / aileron / rudder ise daha dar;
+        # çünkü gereğinden fazla açı üretmesini istemiyoruz.
+        #
 
-        self.collective_scale = 0.10
+        self.collective_scale = 0.14
 
-        self.elevator_scale = 0.06
+        self.elevator_scale = 0.04
 
-        self.aileron_scale = 0.05
+        self.aileron_scale = 0.04
 
-        self.rudder_scale = 0.06
+        self.rudder_scale = 0.04
 
     # =========================================================
     # CREATE JSBSIM
@@ -566,9 +580,6 @@ class HelicopterEnv(gym.Env):
         # =====================================================
         # 1) ALTITUDE PROGRESS
         # =====================================================
-        #
-        # Yükseliyorsa küçük pozitif reward.
-        #
 
         reward += (
             2.0
@@ -584,7 +595,7 @@ class HelicopterEnv(gym.Env):
             reward -= 1.0
 
         # =====================================================
-        # 3) TARGET ALTITUDE ERROR
+        # 3) ALTITUDE TARGET ERROR
         # =====================================================
 
         reward -= (
@@ -597,10 +608,6 @@ class HelicopterEnv(gym.Env):
         # =====================================================
         # 4) CLIMB RATE
         # =====================================================
-        #
-        # Kalkışın ilk bölümünde yaklaşık
-        # 5 ft/s dikey hız istiyoruz.
-        #
 
         if (
             altitude > 7.0
@@ -644,21 +651,24 @@ class HelicopterEnv(gym.Env):
             )
 
         # =====================================================
-        # 6) YATAY KAÇIŞ
+        # 6) FORWARD / BACKWARD MOVEMENT
         # =====================================================
         #
-        # TAKEOFF görevinde hem ileri/geri hem
-        # sağ/sol hareket minimum olmalı.
-        #
-        # Önceki model yüzlerce ft yatay kaçıyordu.
+        # Son testte forward velocity yaklaşık
+        # 65 ft/s değerine kadar çıktığı için
+        # bu cezayı güçlendiriyoruz.
         #
 
         reward -= (
-            0.30
+            0.60
             * abs(
                 forward_velocity
             )
         )
+
+        # =====================================================
+        # 7) LATERAL MOVEMENT
+        # =====================================================
 
         reward -= (
             0.30
@@ -668,11 +678,8 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 7) HEADING
+        # 8) HEADING
         # =====================================================
-        #
-        # Kalkarken başlangıç yönünü korumasını istiyoruz.
-        #
 
         reward -= (
             2.0
@@ -682,12 +689,8 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 8) PITCH / ROLL
+        # 9) PITCH
         # =====================================================
-        #
-        # Dikey kalkışta gövde mümkün olduğunca
-        # düz kalmalı.
-        #
 
         reward -= (
             5.0
@@ -695,6 +698,10 @@ class HelicopterEnv(gym.Env):
                 pitch
             )
         )
+
+        # =====================================================
+        # 10) ROLL
+        # =====================================================
 
         reward -= (
             5.0
@@ -704,7 +711,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 9) ANGULAR RATES
+        # 11) ANGULAR RATES
         # =====================================================
 
         reward -= (
@@ -729,7 +736,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 10) BÜYÜK AÇILARA EK CEZA
+        # 12) LARGE ATTITUDE PENALTY
         # =====================================================
 
         if abs(
@@ -745,12 +752,8 @@ class HelicopterEnv(gym.Env):
             reward -= 30.0
 
         # =====================================================
-        # 11) ACTION ENERGY
+        # 13) ACTION ENERGY
         # =====================================================
-        #
-        # Kontrollerin gereksiz yere sürekli
-        # uç noktalara gitmesini azaltır.
-        #
 
         reward -= (
             0.2
@@ -764,17 +767,21 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 12) 20 FT TARGET ZONE
+        # 14) 20 FT TARGET ZONE
         # =====================================================
+        #
+        # 17 - 23 ft aralığı
+        #
 
         if abs(
             altitude_error
         ) < 3.0:
 
-            # 17-23 ft aralığına girdi.
             reward += 10.0
 
-            # Hedefte dikey hız 0'a yaklaşmalı.
+            # Hedefte dikey hızın sıfıra yaklaşması
+            # gerekiyor.
+
             reward -= (
                 1.0
                 * abs(
@@ -782,9 +789,9 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
-            # ---------------------------------------------
-            # HOLD CONDITIONS
-            # ---------------------------------------------
+            # =================================================
+            # HOLD
+            # =================================================
 
             if (
                 abs(vertical_speed) < 2.0
@@ -824,7 +831,7 @@ class HelicopterEnv(gym.Env):
             terminated = True
 
         # =====================================================
-        # SAFETY
+        # SAFETY - PITCH
         # =====================================================
 
         if abs(
@@ -835,6 +842,10 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
+        # =====================================================
+        # SAFETY - ROLL
+        # =====================================================
+
         if abs(
             roll
         ) > 1.2:
@@ -843,11 +854,19 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
+        # =====================================================
+        # SAFETY - ROTOR RPM
+        # =====================================================
+
         if rotor_rpm < 250.0:
 
             reward -= 150.0
 
             terminated = True
+
+        # =====================================================
+        # SAFETY - TOO HIGH
+        # =====================================================
 
         if altitude > 40.0:
 
@@ -855,7 +874,9 @@ class HelicopterEnv(gym.Env):
 
             terminated = True
 
-        # Yere sert dönüş
+        # =====================================================
+        # HARD RETURN TO GROUND
+        # =====================================================
 
         if (
             self.steps > 100
