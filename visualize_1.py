@@ -1,4 +1,4 @@
-%%writefile visualize_1.py
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation , PillowWriter
