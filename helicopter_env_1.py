@@ -170,7 +170,7 @@ class HelicopterEnv(gym.Env):
 
         self.aileron_scale = 0.04
 
-        self.rudder_scale = 0.04
+        self.rudder_scale = 0.07
 
     # =========================================================
     # CREATE JSBSIM
@@ -654,7 +654,23 @@ class HelicopterEnv(gym.Env):
             )
 
         # =====================================================
-        # 5) AŞIRI DİKEY HIZ
+        # 5) TARGET YAKLASIRKEN FRENLE
+        # =====================================================
+        #
+        # 17 ft'ten sonra hâlâ hızlı yükseliyorsa ceza.
+        # Böylece PPO collective'i hedefe yaklaşırken
+        # daha erken azaltmayı öğrenir.
+        #
+
+        if altitude >= 17.0 and vertical_speed > 1.0:
+
+            reward -= (
+                5.0
+                * vertical_speed
+            )
+
+        # =====================================================
+        # 6) AŞIRI DİKEY HIZ
         # =====================================================
 
         if vertical_speed > 10.0:
@@ -678,7 +694,7 @@ class HelicopterEnv(gym.Env):
             )
 
         # =====================================================
-        # 6) FORWARD / BACKWARD MOVEMENT
+        # 7) FORWARD / BACKWARD MOVEMENT
         # =====================================================
         #
         # Son testte forward velocity yaklaşık
@@ -694,7 +710,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 7) LATERAL MOVEMENT
+        # 8) LATERAL MOVEMENT
         # =====================================================
 
         reward -= (
@@ -705,7 +721,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 8) HEADING
+        # 9) HEADING
         # =====================================================
 
         reward -= (
@@ -716,7 +732,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 9) PITCH
+        # 10) PITCH
         # =====================================================
 
         reward -= (
@@ -727,7 +743,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 10) ROLL
+        # 11) ROLL
         # =====================================================
 
         reward -= (
@@ -738,7 +754,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 11) ANGULAR RATES
+        # 12) ANGULAR RATES
         # =====================================================
 
         reward -= (
@@ -763,7 +779,7 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 12) LARGE ATTITUDE PENALTY
+        # 13) LARGE ATTITUDE PENALTY
         # =====================================================
 
         if abs(
@@ -779,7 +795,7 @@ class HelicopterEnv(gym.Env):
             reward -= 30.0
 
         # =====================================================
-        # 13) ACTION ENERGY
+        # 14) ACTION ENERGY
         # =====================================================
 
         reward -= (
@@ -794,7 +810,25 @@ class HelicopterEnv(gym.Env):
         )
 
         # =====================================================
-        # 14) 20 FT TARGET ZONE
+        # 15) OVERSHOOT PENALTY
+        # =====================================================
+        #
+        # 23 ft üzerine çıkmak ciddi hata.
+        # Amaç 20 ft civarında durmayı öğretmek.
+        #
+
+        if altitude > 23.0:
+
+            reward -= (
+                8.0
+                * (
+                    altitude
+                    - 23.0
+                )
+            )
+
+        # =====================================================
+        # 16) 20 FT TARGET ZONE
         # =====================================================
         #
         # 17 - 23 ft aralığı
