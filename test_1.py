@@ -9,7 +9,7 @@ def main():
     env = HelicopterEnv()
 
     model = PPO.load(
-        "ppo_ah1s_takeoff_hover",
+        "ppo_ah1s_takeoff_v2",
         env=env
     )
 
