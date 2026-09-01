@@ -14,7 +14,7 @@ def create_fdm():
       fdm.run()
   return fdm
 
-def run_test(name,rudder_value):
+def run_test(rudder_value):
   #print()
 
  # print("===============================")
@@ -24,36 +24,39 @@ def run_test(name,rudder_value):
   fdm = create_fdm()
 
 #hover civarı temel kontroller
-  fdm ["fcs/collective-cmd-norm"] = 0.560
+  
   fdm ["fcs/elevator-cmd-norm"] = -0.223
   fdm ["fcs/aileron-cmd-norm"] = 0.240
-  fdm ["fcs/rudder-cmd-norm"] = rudder_value
+  fdm ["fcs/rudder-cmd-norm"] = 0.386
+  fdm ["fcs/collective-cmd-norm"] = 0.650
+  #start_heading = fdm["attitude/heading-true-rad"]
+  for _ in range(2000):
+    fdm.run()
+  start_altitude = fdm["position/h-agl-ft"]
   start_heading = fdm["attitude/heading-true-rad"]
 
-  for step in range(500):
-    for _ in range(10):
-      fdm.run()
-   # if step % 50 == 0:
-    #  heading = fdm["attitude/heading-true-rad"]
-     # yaw_rate = fdm["velocities/r-rad_sec"]
-      #altitude = fdm["position/h-agl-ft"]
-      #print(
-       # f"Step {step:3d} |" f"Heading {heading:7.3f} |" f"Yaw rate {yaw_rate:7.3f} |" f"Altitude {altitude:7.2f}")
-    final_heading = fdm["attitude/heading-true-rad"]
-    return(start_heading, final_heading)
-   # print()
-    #print("Start heading:",round(start_heading,3))
-    #print("Final heading:",round(final_heading,3))
+  #RUDDER TESTİ
+  fdm["fcs/rudder-cmd-norm"] = rudder_value
+  for _ in range(1000):
+    fdm.run()
+  final_altitude = fdm["position/h-agl-ft"]
+  final_yaw_rate = fdm["velocities/r-rad_sec"]
+  return(start_altitude, final_altitude,start_heading,final_heading,final_yaw_rate)
+                       
+
+  
+   
 def main():
   
-    base_start,base_final = run_test("BASE RUDDER",0.386)
-    low_start,low_final =run_test("LOW RUDDER",0.316)
-    high_start,high_final= run_test("HIGH RUDDER",0.456)
+    base = run_test(0.386)
+    low =run_test(0.316)
+    high= run_test(0.456)
     print()
     print("=============YAW CHECK OZET===============")
-    print("BASE:",round(base_start,3),"->",round(base_final,3))
-    print("LOW:",round(low_start,3),"->",round(low_final,3))
-    print("HIGH:",round(high_start,3),"->",round(high_final,3))
+    print("BASE:","Alt",round(base[0],1),"->",round(base[1],1),"Heading",round(base[2],3),"->",round(base[3],3),"YawRate",round(base[4],3))
+    print("LOW:","Alt",round(low[0],1),"->",round(low[1],1),"Heading",round(low[2],3),"->",round(low[3],3),"YawRate",round(low[4],3))
+    print("LOW:","Alt",round(high[0],1),"->",round(high[1],1),"Heading",round(high[2],3),"->",round(high[3],3),"YawRate",round(high[4],3))
+    
 
 
 if __name__ == "__main__":
