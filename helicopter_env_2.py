@@ -132,6 +132,8 @@ class HelicopterEnv(gym.Env):
 
         self.previous_altitude_error = None
 
+        self.previous_heading_error = None
+
         self.fdm = None
 
         # =====================================================
@@ -387,6 +389,8 @@ class HelicopterEnv(gym.Env):
                 "attitude/heading-true-rad"
             ]
         )
+
+        self.previous_heading_error = 0.0
 
         obs = self._get_obs()
 
@@ -710,6 +714,22 @@ class HelicopterEnv(gym.Env):
             )
         )
 
+        current_heading_error = abs(
+            heading_error
+        )
+
+        heading_improvement = (
+            self.previous_heading_error - current_heading_error
+        )
+
+        reward_heading_progress = (
+            8.0 * heading_improvement
+        )
+
+        self.previous_heading_error = (
+            current_heading_error
+        )
+
         # =====================================================
         # ALTITUDE
         # =====================================================
@@ -863,7 +883,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
         # 7) HEADING
         # =====================================================
-
+        reward += reward_heading_progress
         reward -= (
             5.0
             * abs(
