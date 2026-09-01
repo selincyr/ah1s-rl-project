@@ -18,8 +18,11 @@ def run_test(name,collective_aciton):
   env.close()
 
 def main():
+  print("TEST 1")
   run_test("Action 0.0",0.0)
+  print("TEST 2")
   run_test("Action 0.5",0.5)
+  print("TEST 3")
   run_test("Action 1.0",1.0)
   
 
