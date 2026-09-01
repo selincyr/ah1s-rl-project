@@ -359,7 +359,8 @@ class HelicopterEnv(gym.Env):
             trim_elevator,
             trim_aileron,
             trim_rudder,
-            False
+            False,
+            None
         )
 
         return obs, info
