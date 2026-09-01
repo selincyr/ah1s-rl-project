@@ -36,10 +36,35 @@ class HelicopterEnv(gym.Env):
 
         self.fdm = None
 
-        self.base_collective = 0.560
-        self.base_elevator = -0.223
-        self.base_aileron = 0.240
-        self.base_rudder = 0.386
+        self.base_collective = 0.5601
+        self.base_elevator = -0.2227
+        self.base_aileron = 0.2399
+        self.base_rudder = 0.3855
+
+        self.trim_altitudes = np.array(
+            [20.0, 50.0, 100.0, 200.0, 500.0, 1000.0],
+            dtype=np.float32
+        )
+
+        self.trim_collective = np.array(
+            [0.5601, 0.5699, 0.5706, 0.5719, 0.5759, 0.5827],
+            dtype=np.float32
+        )
+
+        self.trim_elevator = np.array(
+            [-0.2227, -0.2228, -0.2228, -0.2228, -0.2228, -0.2228],
+            dtype=np.float32
+        )
+
+        self.trim_aileron = np.array(
+            [0.2399, 0.2423, 0.2426, 0.2432, 0.2448, 0.2477],
+            dtype=np.float32
+        )
+
+        self.trim_rudder = np.array(
+            [0.3855, 0.3901, 0.3905, 0.3913, 0.3937, 0.3978],
+            dtype=np.float32
+        )
 
         self.collective_scale = 0.14
         self.elevator_scale = 0.06
@@ -163,6 +188,41 @@ class HelicopterEnv(gym.Env):
             self.observation_space.high
         ).astype(np.float32)
 
+    def _get_trim_controls(self, altitude):
+        collective = float(
+            np.interp(
+                altitude,
+                self.trim_altitudes,
+                self.trim_collective
+            )
+        )
+
+        elevator = float(
+            np.interp(
+                altitude,
+                self.trim_altitudes,
+                self.trim_elevator
+            )
+        )
+
+        aileron = float(
+            np.interp(
+                altitude,
+                self.trim_altitudes,
+                self.trim_aileron
+            )
+        )
+
+        rudder = float(
+            np.interp(
+                altitude,
+                self.trim_altitudes,
+                self.trim_rudder
+            )
+        )
+
+        return collective, elevator, aileron, rudder
+
     def _update_phase(self, altitude):
         if altitude < 30.0:
             self.phase = "TAKEOFF"
@@ -220,14 +280,23 @@ class HelicopterEnv(gym.Env):
 
         obs = self._get_obs_from_state(state)
 
+        (
+            trim_collective,
+            trim_elevator,
+            trim_aileron,
+            trim_rudder
+        ) = self._get_trim_controls(
+            state["altitude"]
+        )
+
         info = self._create_info(
             state,
             self._target_vertical_speed(state["altitude"]),
             self._target_forward_velocity(),
-            self.base_collective,
-            self.base_elevator,
-            self.base_aileron,
-            self.base_rudder,
+            trim_collective,
+            trim_elevator,
+            trim_aileron,
+            trim_rudder,
             False
         )
 
@@ -239,9 +308,22 @@ class HelicopterEnv(gym.Env):
         action = np.asarray(action, dtype=np.float32)
         action = np.clip(action, -1.0, 1.0)
 
+        current_altitude = float(
+            self.fdm["position/h-agl-ft"]
+        )
+
+        (
+            trim_collective,
+            trim_elevator,
+            trim_aileron,
+            trim_rudder
+        ) = self._get_trim_controls(
+            current_altitude
+        )
+
         collective = float(
             np.clip(
-                self.base_collective
+                trim_collective
                 + self.collective_scale * float(action[0]),
                 0.0,
                 1.0
@@ -250,7 +332,7 @@ class HelicopterEnv(gym.Env):
 
         elevator = float(
             np.clip(
-                self.base_elevator
+                trim_elevator
                 + self.elevator_scale * float(action[1]),
                 -1.0,
                 1.0
@@ -259,7 +341,7 @@ class HelicopterEnv(gym.Env):
 
         aileron = float(
             np.clip(
-                self.base_aileron
+                trim_aileron
                 + self.aileron_scale * float(action[2]),
                 -1.0,
                 1.0
@@ -268,7 +350,7 @@ class HelicopterEnv(gym.Env):
 
         rudder = float(
             np.clip(
-                self.base_rudder
+                trim_rudder
                 + self.rudder_scale * float(action[3]),
                 -1.0,
                 1.0
