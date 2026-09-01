@@ -7,8 +7,8 @@ def create_fdm():
   script_path = os.path.join(project_dir,"scripts","ah1s_rl_start.xml")
   fdm = jsbsim.FGFDMExec(root_dir=root_dir)
   if not fdm.load_script(script_path):
-      raise RuntimeError("Script yuklenmedi")
-    fdm.run_ic()
+    raise RuntimeError("Script yuklenmedi")
+  fdm.run_ic()
     while(
       fdm["propulsion/engine/rotor-rpm"] < 320.0):
         fdm.run()
