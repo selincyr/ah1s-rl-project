@@ -15,33 +15,26 @@ def create_fdm():
   return fdm
 
 def run_test(rudder_value):
-  #print()
-
- # print("===============================")
- # print(name)
- # print("Rudder:", rudder_value)
- # print("===============================")
-  fdm = create_fdm()
-
+    fdm = create_fdm()
 #hover civarı temel kontroller
   
-  fdm ["fcs/elevator-cmd-norm"] = -0.223
-  fdm ["fcs/aileron-cmd-norm"] = 0.240
-  fdm ["fcs/rudder-cmd-norm"] = 0.386
-  fdm ["fcs/collective-cmd-norm"] = 0.650
+    fdm ["fcs/elevator-cmd-norm"] = -0.223
+    fdm ["fcs/aileron-cmd-norm"] = 0.240
+    fdm ["fcs/rudder-cmd-norm"] = 0.386
+    fdm ["fcs/collective-cmd-norm"] = 0.650
   #start_heading = fdm["attitude/heading-true-rad"]
-  for _ in range(2000):
-    fdm.run()
-  start_altitude = fdm["position/h-agl-ft"]
-  start_heading = fdm["attitude/heading-true-rad"]
+    for _ in range(2000):
+        fdm.run()
+    start_altitude = fdm["position/h-agl-ft"]
+    start_heading = fdm["attitude/heading-true-rad"]
 
   #RUDDER TESTİ
-  fdm["fcs/rudder-cmd-norm"] = rudder_value
-  for _ in range(1000):
-    fdm.run()
-  final_altitude = fdm["position/h-agl-ft"]
-  final_yaw_rate = fdm["velocities/r-rad_sec"]
-  return(start_altitude, final_altitude,start_heading,final_heading,final_yaw_rate)
+    fdm["fcs/rudder-cmd-norm"] = rudder_value
+    for _ in range(1000):
+      fdm.run()
+    final_altitude = fdm["position/h-agl-ft"]
+    final_yaw_rate = fdm["velocities/r-rad_sec"]
+    return(start_altitude, final_altitude,start_heading,final_heading,final_yaw_rate)
                        
 
   
