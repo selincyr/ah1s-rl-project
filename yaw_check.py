@@ -5,7 +5,7 @@ def create_fdm():
   root_dir = os.path.dirname(jsbsim.__file__)
   project_dir = os.path.dirname(os.path.abspath(__file__))
   script_path = os.path.join(project_dir,"scripts","ah1s_rl_start.xml")
-  fdm = jsbsim.FGDMExec(root_dir=root_dir)
+  fdm = jsbsim.FGFDMExec(root_dir=root_dir)
   if not fdm.load_script(script_path):
     raise RuntimeError("Script yuklenmedi")
     fdm.run_ic()
