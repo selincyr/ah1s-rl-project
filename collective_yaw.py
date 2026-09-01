@@ -1,3 +1,8 @@
+import os
+import jsbsim
+
+
+
 def create_fdm():
   root_dir = os.path.dirname(jsbsim.__file__)
   project_dir = os.path.dirname(os.path.abspath(__file__))
