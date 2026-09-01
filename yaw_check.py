@@ -49,7 +49,7 @@ def main():
     print("=============YAW CHECK OZET===============")
     print("BASE:","Alt",round(base[0],1),"->",round(base[1],1),"Heading",round(base[2],3),"->",round(base[3],3),"YawRate",round(base[4],3))
     print("LOW:","Alt",round(low[0],1),"->",round(low[1],1),"Heading",round(low[2],3),"->",round(low[3],3),"YawRate",round(low[4],3))
-    print("LOW:","Alt",round(high[0],1),"->",round(high[1],1),"Heading",round(high[2],3),"->",round(high[3],3),"YawRate",round(high[4],3))
+    print("HIGH:","Alt",round(high[0],1),"->",round(high[1],1),"Heading",round(high[2],3),"->",round(high[3],3),"YawRate",round(high[4],3))
     
 
 
