@@ -17,19 +17,19 @@ def create_fdm():
   return fdm
 
 def run_test(collective_value):
-  fdm = create_fdm()
-  for step in range(500):
+    fdm = create_fdm()
+    for step in range(500):
   #temel trim kontrolleri
-      fdm["fcs/elevator-cmd-norm"] = -0.223
-      fdm["fcs/aileron-cmd-norm"] = 0.240
-      fdm["fsc/rudder-cmd-norm"] = 0.386
-  for _ in range(10):
-      fdm.run()
-altitude = fdm["position/h-agl-ft"]
-heading = fdm["attitude/heading-true-rad"]
-yaw_rate = fdm["velocities/r-rad_sec"]
-collective_seen = fdm["fcs/collective-cmd-norm"]
-return(altitude,heading,yaw_rate,collevtive_seen)
+        fdm["fcs/elevator-cmd-norm"] = -0.223
+        fdm["fcs/aileron-cmd-norm"] = 0.240
+        fdm["fsc/rudder-cmd-norm"] = 0.386
+        for _ in range(10):
+            fdm.run()
+    altitude = fdm["position/h-agl-ft"]
+    heading = fdm["attitude/heading-true-rad"]
+    yaw_rate = fdm["velocities/r-rad_sec"]
+    collective_seen = fdm["fcs/collective-cmd-norm"]
+    return(altitude,heading,yaw_rate,collevtive_seen)
  # fdm["fcs/collective-cmd-run"] = collective_value
 #  print(
    # ["commanded collective:",collective_value,"jsbsim sees:",fdm["fcs/collective-cmd-norm"]
