@@ -51,11 +51,11 @@ def main():
     # =====================================================
 
     model.save(
-        "ppo_ah1s_1000ft_v5"
+        "ppo_ah1s_1000ft_v6"
     )
 
     print(
-        "Model kaydedildi: ppo_ah1s_1000ft_v5.zip"
+        "Model kaydedildi: ppo_ah1s_1000ft_v6.zip"
     )
 
     env.close()
