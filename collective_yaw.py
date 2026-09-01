@@ -29,7 +29,7 @@ altitude = fdm["position/h-agl-ft"]
 heading = fdm["attitude/heading-true-rad"]
 yaw_rate = fdm["velocities/r-rad_sec"]
 collective_seen = fdm["fcs/collective-cmd-norm"]
-return(altitude,heading,yaw_rate,collevtive_seen)
+  return(altitude,heading,yaw_rate,collevtive_seen)
  # fdm["fcs/collective-cmd-run"] = collective_value
 #  print(
    # ["commanded collective:",collective_value,"jsbsim sees:",fdm["fcs/collective-cmd-norm"]
