@@ -205,7 +205,7 @@ class HelicopterEnv(gym.Env):
     # =========================================================
 
     def _get_obs(self):
-        heading =self.fdm["attitude/heading-true-rad]
+        heading =self.fdm["attitude/heading-true-rad"]
         if self.target_heading is None:
            heading_error = 0.0
         else:
