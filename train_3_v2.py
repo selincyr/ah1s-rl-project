@@ -7,26 +7,38 @@ from stable_baselines3.common.callbacks import (
     CheckpointCallback
 )
 
-from helicopter_env_3_v2 import HelicopterEnv
+from helicopter_env_3_v3 import HelicopterEnv
 
 
 def main():
 
-    print("AH-1S dynamic-trim training baslatiliyor...")
+    print("AH-1S dynamic-trim v3 training baslatiliyor...")
+
+    # =====================================================
+    # FOLDERS
+    # =====================================================
 
     os.makedirs(
-        "models/task3_trim_v2",
+        "models/task3_trim_v3",
         exist_ok=True
     )
 
     os.makedirs(
-        "logs/task3_trim_v2",
+        "logs/task3_trim_v3",
         exist_ok=True
     )
+
+    # =====================================================
+    # TRAIN ENVIRONMENT
+    # =====================================================
 
     train_env = Monitor(
         HelicopterEnv()
     )
+
+    # =====================================================
+    # EVALUATION ENVIRONMENT
+    # =====================================================
 
     eval_env = Monitor(
         HelicopterEnv()
@@ -41,6 +53,10 @@ def main():
         "Action space:",
         train_env.action_space.shape
     )
+
+    # =====================================================
+    # PPO
+    # =====================================================
 
     model = PPO(
         "MlpPolicy",
@@ -63,28 +79,36 @@ def main():
 
         verbose=1,
 
-        tensorboard_log="logs/task3_trim_v2/"
+        tensorboard_log="logs/task3_trim_v3/"
     )
+
+    # =====================================================
+    # CHECKPOINT
+    # =====================================================
 
     checkpoint_callback = CheckpointCallback(
 
         save_freq=50_000,
 
-        save_path="models/task3_trim_v2/",
+        save_path="models/task3_trim_v3/",
 
         name_prefix="checkpoint"
     )
+
+    # =====================================================
+    # EVALUATION
+    # =====================================================
 
     eval_callback = EvalCallback(
 
         eval_env,
 
         best_model_save_path=(
-            "models/task3_trim_v2/best/"
+            "models/task3_trim_v3/best/"
         ),
 
         log_path=(
-            "logs/task3_trim_v2/eval/"
+            "logs/task3_trim_v3/eval/"
         ),
 
         eval_freq=20_000,
@@ -96,6 +120,10 @@ def main():
         render=False
     )
 
+    # =====================================================
+    # TRAINING
+    # =====================================================
+
     model.learn(
 
         total_timesteps=300_000,
@@ -106,9 +134,13 @@ def main():
         ]
     )
 
+    # =====================================================
+    # FINAL MODEL
+    # =====================================================
+
     model.save(
-        "models/task3_trim_v2/"
-        "ppo_ah1s_task3_trim_v2_final"
+        "models/task3_trim_v3/"
+        "ppo_ah1s_task3_trim_v3_final"
     )
 
     train_env.close()
@@ -116,6 +148,15 @@ def main():
 
     print()
     print("Training tamamlandi.")
+
+    print(
+        "Final model:"
+    )
+
+    print(
+        "models/task3_trim_v3/"
+        "ppo_ah1s_task3_trim_v3_final.zip"
+    )
 
 
 if __name__ == "__main__":
