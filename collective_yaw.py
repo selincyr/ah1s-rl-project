@@ -20,9 +20,9 @@ def run_test(collective_value):
   fdm = create_fdm()
   for step in range(500):
   #temel trim kontrolleri
-  fdm["fcs/elevator-cmd-norm"] = -0.223
-  fdm["fcs/aileron-cmd-norm"] = 0.240
-  fdm["fsc/rudder-cmd-norm"] = 0.386
+      fdm["fcs/elevator-cmd-norm"] = -0.223
+      fdm["fcs/aileron-cmd-norm"] = 0.240
+      fdm["fsc/rudder-cmd-norm"] = 0.386
   for _ in range(10):
       fdm.run()
 altitude = fdm["position/h-agl-ft"]
