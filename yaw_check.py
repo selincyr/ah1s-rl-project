@@ -9,10 +9,10 @@ def create_fdm():
   if not fdm.load_script(script_path):
     raise RuntimeError("Script yuklenmedi")
   fdm.run_ic()
-    while(
-      fdm["propulsion/engine/rotor-rpm"] < 320.0):
-        fdm.run()
-    return fdm
+  while(
+    fdm["propulsion/engine/rotor-rpm"] < 320.0):
+      fdm.run()
+  return fdm
 
 def run_test(name,rudder_value):
   print()
@@ -45,26 +45,16 @@ def run_test(name,rudder_value):
     print("Final heading:",round(final_heading,3))
 def main(): 
   #base trim rudder
-  run_test("BASE RUDDER",0.386)
+    run_test("BASE RUDDER",0.386)
   #RUDDER biraz azaltilmiş
-  run_test("LOW RUDDER",0.316)
+    run_test("LOW RUDDER",0.316)
   #RUDER BİRAZ ARTİRİLMİŞ
-  run_test("HIGH RUDDER",0.456)
+    run_test("HIGH RUDDER",0.456)
 
 
 if __name__ == "__main__":
-    main()
+  main()
 
 
 
     
-
-
-
-
-
-
-
-
-
-
