@@ -12,7 +12,7 @@ def create_fdm():
   return fdm
 
 def run_test(collective_value):
-  fdm _create_fdm()
+  fdm = create_fdm()
   #temel trim kontrolleri
   fdm["fcs/elevator-cmd-norm"] = -0.223
   fdm["fcs/aileron-cmd-norm"] = 0.240
