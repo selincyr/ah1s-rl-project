@@ -25,10 +25,10 @@ def run_test(name,rudder_value):
   fdm = create_fdm()
 
 #hover civarı temel kontroller
-  fdm =["fcs/collective-cmd-norm"] = 0.560
-  fdm =["fcs/elevator-cmd-norm"] = -0.223
-  fdm =["fcs/aileron-cmd-norm"] = 0.240
-  fdm =["fcs/rudder-cmd-norm"] = rudder_value
+  fdm ["fcs/collective-cmd-norm"] = 0.560
+  fdm ["fcs/elevator-cmd-norm"] = -0.223
+  fdm ["fcs/aileron-cmd-norm"] = 0.240
+  fdm ["fcs/rudder-cmd-norm"] = rudder_value
   start_heading = fdm["attitude/heading-true-rad"]
 
   for step in range(500):
