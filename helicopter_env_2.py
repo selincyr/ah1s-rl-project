@@ -158,7 +158,7 @@ class HelicopterEnv(gym.Env):
 
         self.aileron_scale = 0.04
 
-        self.rudder_scale = 0.07
+        self.rudder_scale = 0.10
 
     # =========================================================
     # CREATE JSBSIM
