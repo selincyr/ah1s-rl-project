@@ -64,7 +64,7 @@ class HelicopterEnv(gym.Env):
         # 8  pitch rate
         # 9  yaw rate
         # 10 rotor RPM
-        #
+        # 11 heading error
 
         self.observation_space = spaces.Box(
 
@@ -80,7 +80,8 @@ class HelicopterEnv(gym.Env):
                     -20,
                     -20,
                     -20,
-                    0
+                    0,
+                    -np.pi
                 ],
                 dtype=np.float32
             ),
@@ -97,7 +98,8 @@ class HelicopterEnv(gym.Env):
                     20,
                     20,
                     20,
-                    700
+                    700,
+                    np.pi
                 ],
                 dtype=np.float32
             ),
@@ -203,6 +205,12 @@ class HelicopterEnv(gym.Env):
     # =========================================================
 
     def _get_obs(self):
+        heading =self.fdm["attitude/heading-true-rad]
+        if self.target_heading is None:
+           heading_error = 0.0
+        else:
+           heading_error = np.arctan2(np.sin(heading - self.target_heading),np.cos(heading - self.target_heading))
+    
 
         return np.array(
             [
@@ -248,7 +256,11 @@ class HelicopterEnv(gym.Env):
 
                 self.fdm[
                     "propulsion/engine/rotor-rpm"
-                ]
+                ],
+
+                heading_error
+
+                
             ],
 
             dtype=np.float32
