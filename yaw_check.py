@@ -18,10 +18,10 @@ def create_fdm():
 def run_test(name,rudder_value):
   print()
 
-print("===============================")
+  print("===============================")
   print(name)
   print("Rudder:", rudder_value)
-print("===============================")
+  print("===============================")
   fdm = create_fdm()
 
 #hover civarı temel kontroller
