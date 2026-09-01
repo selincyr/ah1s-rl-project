@@ -25,7 +25,7 @@ def run_test(collective_value):
   #test edilecek collective
   fdm["fcs/collective-cmd-run"] = collective_value
   print(
-    "commanded collective:",collective_value,"jsbsim sees:",fdm["fcs/collective-cmd-norm"]
+    ["commanded collective:",collective_value,"jsbsim sees:",fdm["fcs/collective-cmd-norm"]
   )
   start_heading = fdm["attitude/heading-true-rad"]
   for _ in range(2000):
