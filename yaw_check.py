@@ -31,7 +31,7 @@ def run_test(rudder_value):
   #RUDDER TESTİ
     fdm["fcs/rudder-cmd-norm"] = rudder_value
     for _ in range(1000):
-      fdm.run()
+       fdm.run()
       final_altitude = fdm["position/h-agl-ft"]
       final_yaw_rate = fdm["velocities/r-rad_sec"]
     return(start_altitude, final_altitude,start_heading,final_heading,final_yaw_rate)
