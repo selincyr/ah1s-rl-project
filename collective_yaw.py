@@ -39,5 +39,5 @@ def main():
     print("0.660:",c3)
     print("0.700:",c4)
 
-if __name__ = "__main__":
+if __name__ == "__main__":
     main()
