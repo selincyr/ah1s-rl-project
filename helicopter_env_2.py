@@ -842,7 +842,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            0.55
+            0.75
             * abs(
                 lateral_velocity
             )
@@ -853,7 +853,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            4.0
+            5.0
             * abs(
                 heading_error
             )
