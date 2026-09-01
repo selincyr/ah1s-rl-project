@@ -745,7 +745,7 @@ class HelicopterEnv(gym.Env):
         #
 
         reward += (
-            6.0
+            10.0
             * error_improvement
         )
 
@@ -842,7 +842,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            0.70
+            0.55
             * abs(
                 lateral_velocity
             )
@@ -853,7 +853,7 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         reward -= (
-            6.0
+            4.0
             * abs(
                 heading_error
             )
@@ -1068,8 +1068,8 @@ class HelicopterEnv(gym.Env):
         # =====================================================
 
         if (
-            abs(forward_velocity) > 50.0
-            or abs(lateral_velocity) > 35.0
+            abs(forward_velocity) > 55.0
+            or abs(lateral_velocity) > 45.0
         ):
 
             reward -= 300.0
