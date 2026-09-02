@@ -83,7 +83,7 @@ def main():
         seed=42,
 
         tensorboard_log=(
-            "logs/task6_hover300/"
+            "logs/task7_hover300/"
         )
     )
 
@@ -96,7 +96,7 @@ def main():
         save_freq=50_000,
 
         save_path=(
-            "models/task6_hover300/"
+            "models/task7_hover300/"
         ),
 
         name_prefix="checkpoint"
@@ -111,11 +111,11 @@ def main():
         eval_env,
 
         best_model_save_path=(
-            "models/task6_hover300/best/"
+            "models/task7_hover300/best/"
         ),
 
         log_path=(
-            "logs/task6_hover300/eval/"
+            "logs/task7_hover300/eval/"
         ),
 
         eval_freq=20_000,
@@ -146,7 +146,7 @@ def main():
     # =====================================================
 
     model.save(
-        "models/task6_hover300/"
+        "models/task7_hover300/"
         "ppo_ah1s_hover300_v7_final"
     )
 
@@ -161,8 +161,8 @@ def main():
     )
 
     print(
-        "models/task6_hover300/"
-        "ppo_ah1s_hover300_v6_final.zip"
+        "models/task7_hover300/"
+        "ppo_ah1s_hover300_v7_final.zip"
     )
 
 
