@@ -543,7 +543,7 @@ class HelicopterEnv(gym.Env):
             reward -= 3.0 * excess
             reward -= 6.0 * (excess ** 2)
         
-        if altitude > 280.0
+        if altitude > 280.0:
             reward -= 0.80 * abs(vertical_speed)
         if altitude > 280.0 and vertical_speed > 2.0:
             reward -= 2.0 * (vertical_speed - 2.0)
