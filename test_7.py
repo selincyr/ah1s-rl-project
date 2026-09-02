@@ -1,7 +1,7 @@
 import numpy as np
 from stable_baselines3 import PPO
 
-from helicopter_env_6 import HelicopterEnv
+from helicopter_env_7 import HelicopterEnv
 
 
 MODEL_PATHS = {
