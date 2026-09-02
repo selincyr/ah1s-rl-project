@@ -292,6 +292,15 @@ class HelicopterEnv(gym.Env):
                 )
             )
 
+        if altitude < 270.0:
+            return float(
+                np.interp(
+                    altitude,
+                    [240.0, 270.0],
+                    [4.0, 2.0]
+                )
+            )
+
         if altitude < 285.0:
             return float(
                 np.interp(
@@ -300,7 +309,6 @@ class HelicopterEnv(gym.Env):
                     [2.0, 1.0]
                 )
             )
-
         if altitude < 300.0:
             return float(
                 np.interp(
@@ -309,7 +317,7 @@ class HelicopterEnv(gym.Env):
                     [1.0, 0.0]
                 )
             )
-
+  
         # If we overshoot, command a gentle descent back toward 300 ft.
         return float(
             np.clip(
