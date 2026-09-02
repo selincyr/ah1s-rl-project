@@ -5,8 +5,8 @@ from helicopter_env_6 import HelicopterEnv
 
 
 MODEL_PATHS = {
-    "BEST": "models/task6_hover300/best/best_model",
-    "FINAL": "models/task6_hover300/ppo_ah1s_hover300_v6_final",
+    "BEST": "models/task7_hover300/best/best_model",
+    "FINAL": "models/task7_hover300/ppo_ah1s_hover300_v7_final",
 }
 
 
