@@ -13,7 +13,7 @@ class ACMIWriter:
     self.file.write(f"0,ReferenceTime={reference_time}\n")
     
     ########HELİCOPTER OBJECT########
-    self.file.writef"{self.object_id},"f"Type=Air+Rotorcraft,"f"Name={aircraft_name},f"CallSign={callsign}\n")
+    self.file.write(f"{self.object_id},"f"Type=Air+Rotorcraft,"f"Name={aircraft_name},f"CallSign={callsign}\n")
   def write(self,
             time,
             longitude,
