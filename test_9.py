@@ -16,10 +16,7 @@ MODEL_PATHS = [
 ]
 
 
-def test_model(
-    model_path,
-    label
-):
+def test_model(model_path, label):
 
     print()
     print("=" * 90)
@@ -71,13 +68,37 @@ def test_model(
 
         final_info = info
 
-        altitude = info["altitude"]
-        vertical_speed = info["vertical_speed"]
-        forward_velocity = info["forward_velocity"]
-        lateral_velocity = info["lateral_velocity"]
-        heading_error = info["heading_error"]
-        roll = info["roll"]
-        pitch = info["pitch"]
+        altitude = float(
+            info["altitude"]
+        )
+
+        vertical_speed = float(
+            info["vertical_speed"]
+        )
+
+        forward_velocity = float(
+            info["forward_velocity"]
+        )
+
+        lateral_velocity = float(
+            info["lateral_velocity"]
+        )
+
+        heading_error = float(
+            info["heading_error"]
+        )
+
+        roll = float(
+            info["roll"]
+        )
+
+        pitch = float(
+            info["pitch"]
+        )
+
+        # ==========================================================
+        # MAXIMUM VALUES
+        # ==========================================================
 
         max_altitude = max(
             max_altitude,
@@ -116,8 +137,14 @@ def test_model(
 
         max_hold = max(
             max_hold,
-            info["target_hold_steps"]
+            int(
+                info["target_hold_steps"]
+            )
         )
+
+        # ==========================================================
+        # ACTION LOG
+        # ==========================================================
 
         collective_actions.append(
             abs(float(action[0]))
@@ -134,6 +161,10 @@ def test_model(
         rudder_actions.append(
             abs(float(action[3]))
         )
+
+        # ==========================================================
+        # ALTITUDE MILESTONES
+        # ==========================================================
 
         if altitude >= 200.0:
             reached_200 = True
@@ -156,6 +187,10 @@ def test_model(
         if altitude >= 300.0:
             reached_300 = True
 
+        # ==========================================================
+        # PERIODIC LOG
+        # ==========================================================
+
         if step % 25 == 0:
 
             print(
@@ -175,6 +210,10 @@ def test_model(
                 f"A2 {float(action[2]):+.2f} | "
                 f"A3 {float(action[3]):+.2f}"
             )
+
+        # ==========================================================
+        # EPISODE END
+        # ==========================================================
 
         if terminated or truncated:
 
@@ -202,13 +241,18 @@ def test_model(
 
             break
 
+    # ==============================================================
+    # SUMMARY
+    # ==============================================================
+
     print()
     print("-" * 90)
     print(f"{label} SUMMARY")
     print("-" * 90)
 
     print(
-        f"Max altitude: {max_altitude:.2f} ft"
+        f"Max altitude: "
+        f"{max_altitude:.2f} ft"
     )
 
     print(
@@ -245,6 +289,10 @@ def test_model(
         f"Max hold: "
         f"{max_hold}/100"
     )
+
+    # ==============================================================
+    # MILESTONES
+    # ==============================================================
 
     print()
     print("ALTITUDE MILESTONES")
@@ -284,6 +332,10 @@ def test_model(
         reached_300
     )
 
+    # ==============================================================
+    # ACTION SUMMARY
+    # ==============================================================
+
     print()
     print("ACTION SUMMARY")
 
@@ -319,6 +371,10 @@ def test_model(
         f"{np.max(rudder_actions):.3f}"
     )
 
+    # ==============================================================
+    # FINAL STATE
+    # ==============================================================
+
     print()
     print("FINAL STATE")
 
@@ -334,37 +390,37 @@ def test_model(
 
     print(
         "Target VS:",
-        f"{final_info['target_vertical_speed']:.2f}"
+        f"{final_info['target_vertical_speed']:.2f} ft/s"
     )
 
     print(
         "Vertical speed:",
-        f"{final_info['vertical_speed']:.2f}"
+        f"{final_info['vertical_speed']:.2f} ft/s"
     )
 
     print(
         "Forward velocity:",
-        f"{final_info['forward_velocity']:.2f}"
+        f"{final_info['forward_velocity']:.2f} ft/s"
     )
 
     print(
         "Lateral velocity:",
-        f"{final_info['lateral_velocity']:.2f}"
+        f"{final_info['lateral_velocity']:.2f} ft/s"
     )
 
     print(
         "Heading error:",
-        f"{final_info['heading_error']:.3f}"
+        f"{final_info['heading_error']:.3f} rad"
     )
 
     print(
         "Roll:",
-        f"{final_info['roll']:.3f}"
+        f"{final_info['roll']:.3f} rad"
     )
 
     print(
         "Pitch:",
-        f"{final_info['pitch']:.3f}"
+        f"{final_info['pitch']:.3f} rad"
     )
 
     print(
