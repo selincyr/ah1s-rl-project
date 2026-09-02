@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.animation import FuncAnimation, PillowWriter
 from stable_baselines3 import PPO
-from helicopter_env_1 import HelicopterEnv
+from helicopter_env_7 import HelicopterEnv
 
 
 def create_helicopter():
@@ -70,7 +70,7 @@ def main():
     print("Environment olusturuldu.")
 
     model = PPO.load(
-        "ppo_ah1s_takeoff_v5",
+        "models/task7_hover300/best/best_model",
         env=env
     )
 
