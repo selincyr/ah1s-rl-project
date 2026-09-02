@@ -556,13 +556,19 @@ class HelicopterEnv(gym.Env):
       
         if altitude >250.0 and action[0] > 0.50:
             excess = action[0] - 0.50
-            reward -= 3.0 * excess
-            reward -= 6.0 * (excess ** 2)
+            reward -= 2.0 * excess
+            reward -= 4.0 * (excess ** 2)
+        if altitude >285.0 and action[0]>0.25:
+            excess = action[0] - 0.25
+            reward -= 4.0 * excess
+            reward -= 8.0 * (excess ** 2)
         
         if altitude > 280.0:
             reward -= 0.80 * abs(vertical_speed)
         if altitude > 280.0 and vertical_speed > 2.0:
             reward -= 2.0 * (vertical_speed - 2.0)
+        if altitude > 300.0 and vertical_speed > 0.0:
+            reward -= 3.0 * vertical_speed
       
 
         # ==========================================================
@@ -716,7 +722,7 @@ class HelicopterEnv(gym.Env):
             termination_reason = "low_rotor_rpm"
 
         # 300 ft curriculum should not wander far above the target.
-        if not terminated and altitude > 345.0:
+        if not terminated and altitude > 330.0:
             reward -= 180.0
             terminated = True
             termination_reason = "altitude_overshoot"
