@@ -4,11 +4,11 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
-from helicopter_env_14 import HelicopterEnv
+from helicopter_env_15 import HelicopterEnv
 
 
-MODEL_DIR = "models/task14_vertical300"
-LOG_DIR = "logs/task14_vertical300"
+MODEL_DIR = "models/task15_vertical300"
+LOG_DIR = "logs/task15_vertical300"
 
 TOTAL_TIMESTEPS = 400_000
 
@@ -40,7 +40,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=25_000,
         save_path=MODEL_DIR,
-        name_prefix="ppo_ah1s_vertical300_v14",
+        name_prefix="ppo_ah1s_vertical300_v15",
     )
 
     eval_callback = EvalCallback(
@@ -66,7 +66,7 @@ def main():
         progress_bar=True,
     )
 
-    final_model_path = f"{MODEL_DIR}/ppo_ah1s_vertical300_v14_final"
+    final_model_path = f"{MODEL_DIR}/ppo_ah1s_vertical300_v15_final"
     model.save(final_model_path)
 
     train_env.close()
