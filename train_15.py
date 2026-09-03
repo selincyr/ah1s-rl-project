@@ -54,7 +54,7 @@ def main():
     )
 
     print("=" * 80)
-    print("V14 TRAINING FROM SCRATCH")
+    print("V15 TRAINING FROM SCRATCH")
     print("Goal: liftoff first, then progressively tighten the X/Y corridor")
     print("Observation size: 15")
     print("Total timesteps:", TOTAL_TIMESTEPS)
@@ -73,7 +73,7 @@ def main():
     eval_env.close()
 
     print("=" * 80)
-    print("V14 TRAINING COMPLETED")
+    print("V15 TRAINING COMPLETED")
     print("Best :", f"{MODEL_DIR}/best/best_model")
     print("Final:", final_model_path)
     print("=" * 80)
