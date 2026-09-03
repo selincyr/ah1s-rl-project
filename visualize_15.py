@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from stable_baselines3 import PPO
-from helicopter_env_14 import HelicopterEnv
+from helicopter_env_15 import HelicopterEnv
 
 
-MODEL_PATH = "models/task14_vertical300/best/best_model"
-OUTPUT_GIF = "ah1s_v14_best.gif"
+MODEL_PATH = "models/task15_vertical300/best/best_model"
+OUTPUT_GIF = "ah1s_v15_best.gif"
 MAX_STEPS = 5000
 
 
@@ -98,7 +98,7 @@ ax.set_zlim(0.0, max(350.0, float(np.max(zs)) + 20.0))
 ax.set_xlabel("East displacement from takeoff (ft)")
 ax.set_ylabel("North displacement from takeoff (ft)")
 ax.set_zlabel("Altitude AGL (ft)")
-ax.set_title("AH-1S RL - V14 BEST - TRUE TAKEOFF-RELATIVE POSITION")
+ax.set_title("AH-1S RL - V15 BEST - TRUE TAKEOFF-RELATIVE POSITION")
 
 # Vertical reference line: the trajectory we actually want.
 ax.plot([0, 0], [0, 0], [0, 300], linestyle="--", linewidth=1.5)
