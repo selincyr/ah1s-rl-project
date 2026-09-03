@@ -1003,7 +1003,7 @@ class HelicopterEnv(gym.Env):
             reward -= 0.22 * abs(forward_velocity)
             reward -= 0.32 * abs(lateral_velocity)
             reward -= 1.00 * abs(heading_error)
-            reward -= 0.45 * horizontal_distance
+            reward -= 0.60 * horizontal_distance
 
             reward -= 2.00 * abs(roll_error)
             reward -= 1.50 * abs(pitch_error)
@@ -1028,7 +1028,7 @@ class HelicopterEnv(gym.Env):
                 and abs(roll_rate) < 0.15
                 and abs(pitch_rate) < 0.15
                 and abs(yaw_rate) < 0.20
-                and horizontal_distance < 8.0
+                and horizontal_distance < 6.0
             )
 
             if hover_ok:
