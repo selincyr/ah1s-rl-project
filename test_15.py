@@ -1,11 +1,11 @@
 import numpy as np
 from stable_baselines3 import PPO
-from helicopter_env_14 import HelicopterEnv
+from helicopter_env_15 import HelicopterEnv
 
 
 MODEL_PATHS = [
-    ("BEST", "models/task14_vertical300/best/best_model"),
-    ("FINAL", "models/task14_vertical300/ppo_ah1s_vertical300_v14_final"),
+    ("BEST", "models/task15_vertical300/best/best_model"),
+    ("FINAL", "models/task15_vertical300/ppo_ah1s_vertical300_v15_final"),
 ]
 
 
