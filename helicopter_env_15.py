@@ -1000,8 +1000,8 @@ class HelicopterEnv(gym.Env):
 
             # V14: once in hover acquisition, translation and yaw must
             # settle together instead of trading one error for another.
-            reward -= 0.45 * abs(forward_velocity)
-            reward -= 0.60 * abs(lateral_velocity)
+            reward -= 0.22 * abs(forward_velocity)
+            reward -= 0.32 * abs(lateral_velocity)
             reward -= 1.00 * abs(heading_error)
             reward -= 0.45 * horizontal_distance
 
