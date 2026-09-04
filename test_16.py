@@ -8,10 +8,8 @@ from helicopter_env_16 import HelicopterEnv
 
 MODEL_DIR = "models/task16b_vertical300"
 
-BEST_MODEL_PATH = f"{MODEL_DIR}/best/best_model"
-FINAL_MODEL_PATH = (
-    f"{MODEL_DIR}/ppo/""ah1s_vertical300_v16b_final"
-)
+BEST_MODEL_PATH = "/content/ah1s-rl-project""models/task16b_vertical300/""best/best_model.zip"
+FINAL_MODEL_PATH = ("/content/ah1s-rl-project/""models/task16b_vertical300/""ah1s_vertical300_v16a_final.zip")
 
 MAX_STEPS = 4000
 
