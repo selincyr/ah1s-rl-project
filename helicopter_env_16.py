@@ -685,7 +685,7 @@ class HelicopterEnv(gym.Env):
 
         # V16-A baseline: equal normalized weights.
         tracking_cost = (
-            corridor_weight * position_loss
+            corridor_weight * position_loss * 1.5
             + horizontal_speed_loss
             + vs_loss
             + heading_loss
