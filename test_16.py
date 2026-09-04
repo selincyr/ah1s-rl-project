@@ -6,11 +6,11 @@ from stable_baselines3 import PPO
 from helicopter_env_16 import HelicopterEnv
 
 
-MODEL_DIR = "models/task16a_vertical300"
+MODEL_DIR = "models/task16b_vertical300"
 
 BEST_MODEL_PATH = f"{MODEL_DIR}/best/best_model"
 FINAL_MODEL_PATH = (
-    f"{MODEL_DIR}/ppo_ah1s_vertical300_v16a_final"
+    f"{MODEL_DIR}/ppo_ah1s_vertical300_v16b_final"
 )
 
 MAX_STEPS = 4000
