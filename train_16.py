@@ -101,7 +101,7 @@ def main():
 
     final_model_path = (
         f"{MODEL_DIR}/"
-        "ppo_ah1s_vertical300_v16a_final"
+        "ppo_ah1s_vertical300_v16b_final"
     )
 
     model.save(final_model_path)
