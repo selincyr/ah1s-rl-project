@@ -17,8 +17,8 @@ from helicopter_env_16 import HelicopterEnv
 
 SEED = 42
 
-MODEL_DIR = "models/task16a_vertical300"
-LOG_DIR = "logs/task16a_vertical300"
+MODEL_DIR = "models/task16b_vertical300"
+LOG_DIR = "logs/task16b_vertical300"
 
 # First experiment is intentionally short.
 # We only want to see whether the normalized reward learns
@@ -69,7 +69,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=25_000,
         save_path=MODEL_DIR,
-        name_prefix="ppo_ah1s_vertical300_v16a",
+        name_prefix="ppo_ah1s_vertical300_v16b",
     )
 
     eval_callback = EvalCallback(
