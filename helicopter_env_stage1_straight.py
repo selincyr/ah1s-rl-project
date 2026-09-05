@@ -7,23 +7,36 @@ from helicopter_env_v2 import HelicopterEnvV2
 
 class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
+    # ========================================================
+    # TARGETS
+    # ========================================================
+
     TARGET_ALTITUDE = 300.0
 
-    # Geometrik kalite
+    # "Çubuk gibi" kalkış kriterleri
     SUCCESS_MAX_DRIFT = 8.0
     SUCCESS_FINAL_DRIFT = 5.0
 
-    # Eğitim sırasında tamamen kaçmasına izin vermiyoruz
+    # Eğitim sırasında fazla kaçarsa episode bitsin
     FAILURE_DRIFT = 25.0
 
     MAX_TIME = 120.0
 
+    # Fine grid search sonucunda seçtiğimiz merkez trim
     BASE_ELEVATOR = -0.15390
     BASE_AILERON = 0.19100
 
+    BASE_RUDDER = 0.39
+
+
+    # ========================================================
+    # INIT
+    # ========================================================
+
     def __init__(self):
 
-        # Parent reset sırasında _get_obs çağrılırsa hazır olsun
+        # Parent __init__ sırasında _get_obs çağrılabilme ihtimali
+        # olduğu için önceden oluşturuyoruz.
         self.north_position = 0.0
         self.east_position = 0.0
 
@@ -31,6 +44,7 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         self.horizontal_path = 0.0
 
         self.previous_altitude = 0.0
+
         self.previous_action_straight = np.zeros(
             4,
             dtype=np.float32
@@ -41,12 +55,12 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
         super().__init__()
 
-        # Eski 12 observation
+        # Parent env = 12 observation
         # +
-        # north position
-        # east position
-        #
-        # = 14
+        # North position
+        # East position
+        # =
+        # 14 observation
         self.observation_space = spaces.Box(
             low=-10.0,
             high=10.0,
@@ -92,14 +106,14 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             dtype=np.float32
         )
 
-        return np.concatenate(
+        obs = np.concatenate(
             [
-                base_obs.astype(
-                    np.float32
-                ),
+                base_obs.astype(np.float32),
                 position_obs
             ]
-        ).astype(
+        )
+
+        return obs.astype(
             np.float32
         )
 
@@ -135,7 +149,7 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
         s = self._raw_state()
 
-        self.previous_altitude = (
+        self.previous_altitude = float(
             s["altitude"]
         )
 
@@ -145,23 +159,14 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
         info.update(
             {
-                "north_position":
-                    0.0,
+                "north_position": 0.0,
+                "east_position": 0.0,
 
-                "east_position":
-                    0.0,
+                "horizontal_drift": 0.0,
+                "max_horizontal_drift": 0.0,
+                "horizontal_path": 0.0,
 
-                "horizontal_drift":
-                    0.0,
-
-                "max_horizontal_drift":
-                    0.0,
-
-                "horizontal_path":
-                    0.0,
-
-                "success":
-                    False,
+                "success": False,
             }
         )
 
@@ -195,8 +200,13 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         # PPO CONTROLS
         # ====================================================
 
-        # Collective:
-        # çalışan Stage 1 mapping aynen korunuyor
+        # ----------------------------------------------------
+        # ACTION 0:
+        # COLLECTIVE
+        #
+        # Çalışan Stage 1 mapping aynen korunuyor
+        # ----------------------------------------------------
+
         collective = (
             0.620
             +
@@ -214,7 +224,13 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
-        # PPO'ya yalnızca KÜÇÜK cyclic authority
+        # ----------------------------------------------------
+        # ACTION 1:
+        # ELEVATOR
+        #
+        # PPO'ya yalnızca küçük authority
+        # ----------------------------------------------------
+
         elevator = (
             self.BASE_ELEVATOR
             +
@@ -223,20 +239,26 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             float(action[1])
         )
 
-        aileron = (
-            self.BASE_AILERON
-            +
-            0.006
-            *
-            float(action[2])
-        )
-
         elevator = float(
             np.clip(
                 elevator,
                 -0.1600,
                 -0.1480
             )
+        )
+
+
+        # ----------------------------------------------------
+        # ACTION 2:
+        # AILERON
+        # ----------------------------------------------------
+
+        aileron = (
+            self.BASE_AILERON
+            +
+            0.006
+            *
+            float(action[2])
         )
 
         aileron = float(
@@ -248,9 +270,17 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
+        # ----------------------------------------------------
+        # ACTION 3 şu an kullanılmıyor
         # Pedal sabit
-        rudder = 0.39
+        # ----------------------------------------------------
 
+        rudder = self.BASE_RUDDER
+
+
+        # ====================================================
+        # APPLY CONTROLS
+        # ====================================================
 
         self.fdm[
             "fcs/collective-cmd-norm"
@@ -270,7 +300,7 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
 
         # ====================================================
-        # PHYSICS
+        # RUN JSBSIM
         # ====================================================
 
         physics_ok = True
@@ -279,17 +309,47 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             self.PHYSICS_STEPS
         ):
 
-            if not self.fdm.run():
+            result = self.fdm.run()
+
+            if not result:
 
                 physics_ok = False
                 break
 
 
+        # ====================================================
+        # STATE
+        # ====================================================
+
         s = self._raw_state()
+
+        altitude = float(
+            s["altitude"]
+        )
+
+        vertical_speed = float(
+            s["vertical_speed"]
+        )
+
+        forward_velocity = float(
+            s["forward_velocity"]
+        )
+
+        lateral_velocity = float(
+            s["lateral_velocity"]
+        )
+
+        pitch = float(
+            s["pitch"]
+        )
+
+        roll = float(
+            s["roll"]
+        )
 
 
         # ====================================================
-        # EARTH-FRAME POSITION
+        # EARTH-FRAME VELOCITY
         # ====================================================
 
         vn = float(
@@ -304,6 +364,10 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             ]
         )
 
+
+        # ====================================================
+        # POSITION INTEGRATION
+        # ====================================================
 
         self.north_position += (
             vn
@@ -320,9 +384,9 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
         horizontal_speed = float(
             np.sqrt(
-                vn**2
+                vn ** 2
                 +
-                ve**2
+                ve ** 2
             )
         )
 
@@ -334,29 +398,24 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
-        drift = float(
+        horizontal_drift = float(
             np.sqrt(
-                self.north_position**2
+                self.north_position ** 2
                 +
-                self.east_position**2
+                self.east_position ** 2
             )
         )
 
 
         self.max_horizontal_drift = max(
             self.max_horizontal_drift,
-            drift
+            horizontal_drift
         )
 
 
         # ====================================================
-        # REWARD
+        # ALTITUDE
         # ====================================================
-
-        altitude = s["altitude"]
-        vertical_speed = (
-            s["vertical_speed"]
-        )
 
         altitude_error = abs(
             self.TARGET_ALTITUDE
@@ -371,10 +430,15 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             self.previous_altitude
         )
 
-        self.previous_altitude = altitude
+        self.previous_altitude = (
+            altitude
+        )
 
 
-        # İstenen climb profile
+        # ====================================================
+        # DESIRED CLIMB PROFILE
+        # ====================================================
+
         desired_vs = float(
             np.clip(
                 0.05
@@ -390,12 +454,16 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
+        # ====================================================
+        # REWARD
+        # ====================================================
+
         reward = 0.0
 
 
-        # --------------------------------------------
-        # 1) Yukarı çık
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 1. CLIMB REWARD
+        # ----------------------------------------------------
 
         reward += (
             2.0
@@ -404,9 +472,9 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
-        # --------------------------------------------
-        # 2) Doğru vertical speed
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 2. VERTICAL SPEED TRACKING
+        # ----------------------------------------------------
 
         reward -= (
             0.10
@@ -419,21 +487,26 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
-        # --------------------------------------------
-        # 3) ANA HEDEF:
-        # X/Y'de başlangıç noktasında kal
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 3. POSITION ERROR
+        #
+        # ANA HEDEF:
+        #
+        # başlangıç noktasının üstünden kaçma
+        # ----------------------------------------------------
 
         reward -= (
             0.30
             *
-            drift
+            horizontal_drift
         )
 
 
-        # --------------------------------------------
-        # 4) S/yay çizmesini engelle
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 4. HORIZONTAL MOTION PENALTY
+        #
+        # S / yay çizmesini pahalı hale getiriyor
+        # ----------------------------------------------------
 
         reward -= (
             0.20
@@ -442,64 +515,68 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
-        # 5 ft dışına çıkınca ekstra ağır ceza
-        if drift > 5.0:
+        # ----------------------------------------------------
+        # 5 FT DIŞINDA EKSTRA CEZA
+        # ----------------------------------------------------
+
+        if horizontal_drift > 5.0:
 
             reward -= (
                 1.0
                 *
                 (
-                    drift
+                    horizontal_drift
                     -
                     5.0
                 )
             )
 
 
-        # 10 ft dışına çıkınca daha da ağır
-        if drift > 10.0:
+        # ----------------------------------------------------
+        # 10 FT DIŞINDA ÇOK DAHA AĞIR CEZA
+        # ----------------------------------------------------
+
+        if horizontal_drift > 10.0:
 
             reward -= (
                 2.0
                 *
                 (
-                    drift
+                    horizontal_drift
                     -
                     10.0
                 )
             )
 
 
-        # --------------------------------------------
-        # 5) Attitude
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 6. ATTITUDE PENALTY
+        # ----------------------------------------------------
 
         reward -= (
             2.0
             *
-            abs(
-                s["pitch"]
-            )
+            abs(pitch)
         )
 
         reward -= (
             2.0
             *
-            abs(
-                s["roll"]
-            )
+            abs(roll)
         )
 
 
-        # --------------------------------------------
-        # 6) Smooth actions
-        # --------------------------------------------
+        # ----------------------------------------------------
+        # 7. ACTION SMOOTHNESS
+        # ----------------------------------------------------
 
-        action_change = np.mean(
-            np.abs(
-                action
-                -
-                self.previous_action_straight
+        action_change = float(
+            np.mean(
+                np.abs(
+                    action
+                    -
+                    self.previous_action_straight
+                )
             )
         )
 
@@ -523,26 +600,31 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             altitude_error < 10.0
 
             and
+
             abs(
                 vertical_speed
             ) < 1.0
 
             and
+
             horizontal_speed < 2.0
 
             and
-            drift < (
-                self.SUCCESS_MAX_DRIFT
-            )
+
+            horizontal_drift
+            <
+            self.SUCCESS_MAX_DRIFT
 
             and
+
             abs(
-                s["pitch"]
+                pitch
             ) < 0.12
 
             and
+
             abs(
-                s["roll"]
+                roll
             ) < 0.12
         )
 
@@ -567,21 +649,29 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
 
         # ====================================================
         # SUCCESS
+        #
+        # Sadece 300 ft'e çıkmak YETMEZ.
+        #
+        # Bütün uçuş boyunca max drift <= 8 ft
+        # final drift <= 5 ft
+        # 10 saniye stabil hover
         # ====================================================
 
-        success = (
+        success = bool(
 
             self.stable_steps_straight
             >=
             required_stable_steps
 
             and
+
             self.max_horizontal_drift
             <=
             self.SUCCESS_MAX_DRIFT
 
             and
-            drift
+
+            horizontal_drift
             <=
             self.SUCCESS_FINAL_DRIFT
         )
@@ -599,38 +689,21 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         failure = False
 
 
+        # JSBSim failure
         if not physics_ok:
+
             failure = True
 
 
+        # Çok yükselme
         if altitude > 380.0:
+
             failure = True
 
 
+        # Çok fazla yatay kaçış
         if (
-            abs(
-                s["pitch"]
-            ) > 0.60
-        ):
-            failure = True
-
-
-        if (
-            abs(
-                s["roll"]
-            ) > 0.60
-        ):
-            failure = True
-
-
-        if (
-            s["rpm"] < 260.0
-        ):
-            failure = True
-
-
-        if (
-            drift
+            horizontal_drift
             >
             self.FAILURE_DRIFT
         ):
@@ -638,10 +711,42 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             failure = True
 
 
+        # Attitude güvenliği
+        if abs(pitch) > 0.60:
+
+            failure = True
+
+
+        if abs(roll) > 0.60:
+
+            failure = True
+
+
+        # NOT:
+        #
+        # Önceki sürümde burada:
+        #
+        # s["rpm"]
+        #
+        # kullanılmıştı.
+        #
+        # _raw_state() rpm anahtarı döndürmediği için
+        # KeyError oluşuyordu.
+        #
+        # RPM termination şimdilik YOK.
+        #
+        # Rotor/governor hazırlığı zaten parent reset()
+        # tarafından yapılıyor.
+
+
         if failure:
 
             reward -= 500.0
 
+
+        # ====================================================
+        # TERMINATION
+        # ====================================================
 
         terminated = bool(
             success
@@ -657,8 +762,36 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
         )
 
 
+        # ====================================================
+        # OBS
+        # ====================================================
+
         obs = self._get_obs()
 
+
+        # ====================================================
+        # RPM
+        #
+        # info için doğrudan JSBSim'den okumayı deniyoruz.
+        # Bulunamazsa NaN.
+        # ====================================================
+
+        try:
+
+            rpm = float(
+                self.fdm[
+                    "propulsion/engine[0]/propeller-rpm"
+                ]
+            )
+
+        except Exception:
+
+            rpm = np.nan
+
+
+        # ====================================================
+        # INFO
+        # ====================================================
 
         info = {
 
@@ -675,14 +808,10 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
                 vertical_speed,
 
             "forward_velocity":
-                s[
-                    "forward_velocity"
-                ],
+                forward_velocity,
 
             "lateral_velocity":
-                s[
-                    "lateral_velocity"
-                ],
+                lateral_velocity,
 
             "north_velocity":
                 vn,
@@ -696,8 +825,11 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
             "east_position":
                 self.east_position,
 
+            "horizontal_speed":
+                horizontal_speed,
+
             "horizontal_drift":
-                drift,
+                horizontal_drift,
 
             "max_horizontal_drift":
                 self.max_horizontal_drift,
@@ -718,13 +850,13 @@ class HelicopterEnvStage1Straight(HelicopterEnvV2):
                 rudder,
 
             "pitch":
-                s["pitch"],
+                pitch,
 
             "roll":
-                s["roll"],
+                roll,
 
             "rpm":
-                s["rpm"],
+                rpm,
         }
 
 
