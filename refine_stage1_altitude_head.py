@@ -1013,23 +1013,21 @@ for epoch in range(
 
         with torch.no_grad():
 
-            refined_model
-            .policy
-            .action_net
-            .weight[
-                1:
-            ].copy_(
-                frozen_rows
+            (
+                refined_model
+                .policy
+                .action_net
+                .weight[1:]
+                .copy_(frozen_rows)
             )
 
 
-            refined_model
-            .policy
-            .action_net
-            .bias[
-                1:
-            ].copy_(
-                frozen_biases
+            (
+                refined_model
+                .policy
+                .action_net
+                .bias[1:]
+                .copy_(frozen_biases)
             )
 
 
@@ -1094,25 +1092,21 @@ for epoch in range(
 
 with torch.no_grad():
 
-    refined_model
-    .policy
-    .action_net
-    .weight
-    .copy_(
-        best_actor_state[
-            "weight"
-        ]
+    (
+        refined_model
+        .policy
+        .action_net
+        .weight
+        .copy_(best_actor_state["weight"])
     )
 
 
-    refined_model
-    .policy
-    .action_net
-    .bias
-    .copy_(
-        best_actor_state[
-            "bias"
-        ]
+    (
+        refined_model
+        .policy
+        .action_net
+        .bias
+        .copy_(best_actor_state["bias"])
     )
 
 
