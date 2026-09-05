@@ -1,987 +1,693 @@
-
 import numpy as np
-
 from stable_baselines3 import PPO
 
-from helicopter_env_stage1_distill import (
-    HelicopterEnvStage1Distill
-)
+from helicopter_env_stage1_distill import HelicopterEnvStage1Distill
 
 
 # ============================================================
-# SUCCESSFUL SINGLE 4-ACTION PPO
+# MODEL
 # ============================================================
 
 MODEL_PATH = (
-    "models_stage1_distill/"
-    "AH1S_STAGE1_DISTILL_SUCCESS.zip"
+    "models_stage1_final_distilled/"
+    "AH1S_STAGE1_FINAL_DISTILLED.zip"
+)
+
+model = PPO.load(MODEL_PATH)
+
+
+# ============================================================
+# IDENTIFIED HORIZONTAL CONTROL EFFECTIVENESS
+#
+# From the JSBSim AH-1S pulse tests:
+#
+# [dELE]   = B_INV @ [aN]
+# [dAIL]             [aE]
+#
+# Units here are the same identified local control units used
+# in the successful XY teacher.
+# ============================================================
+
+B_INV = np.array(
+    [
+        [-0.20338265, -0.00859620],
+        [ 0.01952073, -0.14631468],
+    ],
+    dtype=np.float64,
 )
 
 
-model = PPO.load(
-    MODEL_PATH
-)
+# ============================================================
+# ENV ACTION AUTHORITY
+#
+# In HelicopterEnvStage1Distill:
+# elevator residual physical authority ~ 0.026
+# aileron  residual physical authority ~ 0.026
+# ============================================================
+
+ACTION_CYCLIC_AUTHORITY = 0.026
 
 
 # ============================================================
-# TARGET
+# EARLY-TAKEOFF RESIDUAL CONTROLLER WINDOW
+#
+# Full correction below 100 ft.
+# Smoothly fades out between 100 and 140 ft.
+# Above 140 ft, final PPO flies completely alone.
 # ============================================================
 
-TARGET_ALTITUDE = 300.0
+FULL_CORRECTION_ALT = 100.0
+FADE_OUT_ALT = 140.0
+
+
+def altitude_gate(altitude):
+    if altitude <= FULL_CORRECTION_ALT:
+        return 1.0
+
+    if altitude >= FADE_OUT_ALT:
+        return 0.0
+
+    return float(
+        (FADE_OUT_ALT - altitude)
+        /
+        (FADE_OUT_ALT - FULL_CORRECTION_ALT)
+    )
 
 
 # ============================================================
-# ALTITUDE CORRECTION REGION
+# GRID
 #
-# Below 275 ft:
-# no correction.
+# The old successful XY teacher used approximately:
+# KP=0.016, KD=0.200, A_MAX=0.12, DELTA_MAX=0.026
 #
-# 275 -> 295:
-# smoothly introduce correction.
-#
-# Above 295:
-# full correction.
-#
-# This protects the already-good climb.
+# Now the final PPO already has its own XY policy, so this is
+# a RESIDUAL correction on top of it. We sweep stronger
+# damping/gain but keep bounded authority.
 # ============================================================
 
-GATE_START_ALT = 275.0
-GATE_FULL_ALT = 295.0
+KP_VALUES = [
+    0.010,
+    0.016,
+    0.022,
+    0.030,
+    0.040,
+]
 
+KD_VALUES = [
+    0.15,
+    0.20,
+    0.28,
+    0.36,
+    0.46,
+]
 
-# ============================================================
-# COLLECTIVE BIAS SWEEP
-#
-# These are PHYSICAL collective corrections.
-#
-# Example:
-#
-# -0.0010 means:
-#
-# original collective 0.6130
-# becomes              0.6120
-#
-# Very small changes on purpose.
-# ============================================================
+A_MAX_VALUES = [
+    0.08,
+    0.12,
+    0.18,
+]
 
-COLLECTIVE_BIASES = [
-
-     0.0000,
-
-    -0.0003,
-    -0.0006,
-    -0.0009,
-
-    -0.0012,
-    -0.0015,
-    -0.0018,
-
-    -0.0021,
-    -0.0024,
-    -0.0027,
+DELTA_MAX_VALUES = [
+    0.012,
+    0.018,
+    0.026,
 ]
 
 
 # ============================================================
-# GATE
+# QUICK SEARCH SETTINGS
 # ============================================================
 
-def altitude_gate(
-    altitude
+QUICK_TIME = 40.0
+
+TARGET_ALT_FOR_EARLY_METRICS = 100.0
+
+
+# ============================================================
+# RUN ONE CANDIDATE
+# ============================================================
+
+def run_candidate(
+    kp,
+    kd,
+    a_max,
+    delta_max,
+    total_time=QUICK_TIME,
+    detailed=False,
 ):
-
-    if altitude <= GATE_START_ALT:
-
-        return 0.0
-
-
-    if altitude >= GATE_FULL_ALT:
-
-        return 1.0
-
-
-    return float(
-        (
-            altitude
-            -
-            GATE_START_ALT
-        )
-        /
-        (
-            GATE_FULL_ALT
-            -
-            GATE_START_ALT
-        )
+    env = HelicopterEnvStage1Distill(
+        teacher_model_path=None,
+        training_mode=False,
     )
-
-
-# ============================================================
-# RUN ONE BIAS
-# ============================================================
-
-def run_bias(
-    collective_bias,
-    detailed=False
-):
-
-    env = (
-        HelicopterEnvStage1Distill(
-            teacher_model_path=None,
-            training_mode=False
-        )
-    )
-
 
     obs, info = env.reset()
 
-
-    dt = env.dt
-
-
-    strict_stable_steps = 0
-
-
-    required_strict_steps = int(
-        10.0
-        /
-        dt
-    )
-
-
-    strict_success = False
-
-    failed = False
-
+    dt = float(env.dt)
+    max_steps = int(total_time / dt)
 
     next_print = 0.0
 
+    early_max_drift = 0.0
+    early_path_at_100 = None
+    drift_at_100 = None
+    horizontal_speed_at_100 = None
+    time_at_100 = None
 
-    max_time = 105.0
+    # Used to quantify how much meandering occurred.
+    # If path is much larger than displacement, the trajectory
+    # is curving / reversing direction.
+    early_s_index = None
 
-    max_steps = int(
-        max_time
-        /
-        dt
-    )
+    physical_failure = False
 
+    last_info = info
+    altitude = float(info.get("altitude", 0.0))
 
-    # ========================================================
-    # TRAJECTORY METRICS
-    # ========================================================
-
-    min_alt_after_55 = float(
-        "inf"
-    )
-
-    max_alt_after_55 = -float(
-        "inf"
-    )
-
-
-    for step in range(
-        max_steps
-    ):
-
-        t = (
-            step
-            *
-            dt
-        )
-
-
-        # ====================================================
-        # ORIGINAL SINGLE PPO
-        # ====================================================
-
+    for step in range(max_steps):
+        # ----------------------------------------------------
+        # FINAL SINGLE PPO
+        # ----------------------------------------------------
         action, _ = model.predict(
             obs,
-            deterministic=True
+            deterministic=True,
         )
-
 
         action = np.asarray(
             action,
-            dtype=np.float32
+            dtype=np.float32,
         ).copy()
 
+        # ----------------------------------------------------
+        # CURRENT STATE
+        # ----------------------------------------------------
+        # ----------------------------------------------------
+        # CURRENT STATE
+        #
+        # IMPORTANT:
+        # HelicopterEnvStage1Distill._state() does not expose
+        # north/east as dictionary keys. The environment already
+        # returns all required navigation values in `info`.
+        #
+        # `info` always represents the current state here:
+        # - immediately after reset on the first iteration
+        # - after env.step() on every following iteration
+        # ----------------------------------------------------
+        altitude = float(info.get("altitude", 0.0))
+        north = float(info.get("north", getattr(env, "north", 0.0)))
+        east = float(info.get("east", getattr(env, "east", 0.0)))
+        vn = float(info.get("vn", 0.0))
+        ve = float(info.get("ve", 0.0))
 
-        # ====================================================
-        # CURRENT ALTITUDE
-        # ====================================================
+        gate = altitude_gate(altitude)
 
-        current_state = (
-            env._state()
+        # ----------------------------------------------------
+        # EARLY XY POSITION + VELOCITY FEEDBACK
+        #
+        # Desired horizontal acceleration:
+        #
+        # a_des = -Kp * position - Kd * velocity
+        # ----------------------------------------------------
+        desired_accel = np.array(
+            [
+                -kp * north - kd * vn,
+                -kp * east  - kd * ve,
+            ],
+            dtype=np.float64,
         )
 
-
-        current_altitude = float(
-            current_state[
-                "altitude"
-            ]
+        desired_accel = np.clip(
+            desired_accel,
+            -a_max,
+            +a_max,
         )
 
+        # ----------------------------------------------------
+        # DECOUPLE INTO PHYSICAL ELEVATOR / AILERON DELTAS
+        # ----------------------------------------------------
+        delta_cyclic = B_INV @ desired_accel
 
-        # ====================================================
-        # SMOOTH ALTITUDE GATE
-        # ====================================================
-
-        gate = altitude_gate(
-            current_altitude
+        delta_cyclic = np.clip(
+            delta_cyclic,
+            -delta_max,
+            +delta_max,
         )
 
+        delta_ele = float(delta_cyclic[0]) * gate
+        delta_ail = float(delta_cyclic[1]) * gate
 
-        # ====================================================
-        # CONVERT PHYSICAL COLLECTIVE BIAS
-        # TO PPO NORMALIZED ACTION BIAS
+        # ----------------------------------------------------
+        # PHYSICAL CYCLIC DELTA -> NORMALIZED PPO ACTION DELTA
         #
-        # collective =
-        # 0.620 + 0.030 * action[0]
-        #
-        # therefore:
-        #
-        # delta_action =
-        # delta_collective / 0.030
-        # ====================================================
-
-        normalized_bias = (
-            collective_bias
+        # env:
+        # physical_delta ~= 0.026 * action
+        # ----------------------------------------------------
+        action[1] += (
+            delta_ele
             /
-            0.030
+            ACTION_CYCLIC_AUTHORITY
         )
 
-
-        action[0] += (
-            gate
-            *
-            normalized_bias
+        action[2] += (
+            delta_ail
+            /
+            ACTION_CYCLIC_AUTHORITY
         )
 
-
-        action[0] = float(
-            np.clip(
-                action[0],
-                -1.0,
-                1.0
-            )
+        action[1] = float(
+            np.clip(action[1], -1.0, 1.0)
         )
 
+        action[2] = float(
+            np.clip(action[2], -1.0, 1.0)
+        )
 
-        # ====================================================
+        # ----------------------------------------------------
         # STEP
-        # ====================================================
-
-        (
-            obs,
-            reward,
-            terminated,
-            truncated,
-            info
-        ) = env.step(
+        # ----------------------------------------------------
+        obs, reward, terminated, truncated, info = env.step(
             action
         )
 
+        last_info = info
 
-        t = (
-            (step + 1)
-            *
-            dt
-        )
+        t = (step + 1) * dt
 
-
-        altitude = float(
-            info[
-                "altitude"
-            ]
-        )
-
-
-        altitude_error = abs(
-            TARGET_ALTITUDE
-            -
-            altitude
-        )
-
-
-        vertical_speed = float(
-            info[
-                "vertical_speed"
-            ]
-        )
-
-
-        drift = float(
-            info[
-                "drift"
-            ]
-        )
-
-
-        max_drift = float(
-            info[
-                "max_drift"
-            ]
-        )
-
-
-        path = float(
-            info[
-                "path"
-            ]
-        )
-
-
-        vn = float(
-            info[
-                "vn"
-            ]
-        )
-
-
-        ve = float(
-            info[
-                "ve"
-            ]
-        )
-
+        altitude = float(info["altitude"])
+        drift = float(info["drift"])
+        path = float(info["path"])
+        vn_now = float(info["vn"])
+        ve_now = float(info["ve"])
 
         horizontal_speed = float(
             np.hypot(
-                vn,
-                ve
+                vn_now,
+                ve_now,
             )
         )
 
-
-        if t >= 55.0:
-
-            min_alt_after_55 = min(
-                min_alt_after_55,
-                altitude
+        # ----------------------------------------------------
+        # FIRST 100 FT METRICS
+        # ----------------------------------------------------
+        if altitude <= TARGET_ALT_FOR_EARLY_METRICS:
+            early_max_drift = max(
+                early_max_drift,
+                drift,
             )
-
-
-            max_alt_after_55 = max(
-                max_alt_after_55,
-                altitude
-            )
-
-
-        # ====================================================
-        # STRICT FINAL STAGE-1 CRITERIA
-        # ====================================================
-
-        strict_stable = (
-
-            altitude_error
-            <=
-            5.0
-
-            and
-
-            abs(
-                vertical_speed
-            )
-            <=
-            0.75
-
-            and
-
-            drift
-            <=
-            5.0
-
-            and
-
-            horizontal_speed
-            <=
-            1.5
-
-            and
-
-            max_drift
-            <=
-            8.0
-
-            and
-
-            path
-            <=
-            25.0
-        )
-
-
-        if strict_stable:
-
-            strict_stable_steps += 1
-
-        else:
-
-            strict_stable_steps = 0
-
 
         if (
-            strict_stable_steps
-            >=
-            required_strict_steps
+            early_path_at_100 is None
+            and altitude >= TARGET_ALT_FOR_EARLY_METRICS
         ):
+            early_path_at_100 = path
+            drift_at_100 = drift
+            horizontal_speed_at_100 = horizontal_speed
+            time_at_100 = t
 
-            strict_success = True
-
-
-        # ====================================================
-        # DETAIL
-        # ====================================================
-
-        if (
-            detailed
-            and
-            t >= next_print
-        ):
-
-            # Actual physical bias currently applied
-            actual_bias = (
-                collective_bias
-                *
-                gate
+            early_s_index = max(
+                0.0,
+                early_path_at_100
+                -
+                drift_at_100,
             )
 
-
+        # ----------------------------------------------------
+        # LOG
+        # ----------------------------------------------------
+        if detailed and t >= next_print:
             print(
                 f"t={t:6.1f}s | "
                 f"ALT={altitude:7.2f} | "
-                f"ERR={altitude_error:5.2f} | "
-                f"VS={vertical_speed:6.2f} | "
                 f"DRIFT={drift:5.2f} | "
-                f"MAX={max_drift:5.2f} | "
                 f"PATH={path:5.2f} | "
-                f"COL={info['collective']:.5f} | "
-                f"BIAS={actual_bias:+.5f}"
+                f"VN={vn_now:+6.3f} | "
+                f"VE={ve_now:+6.3f} | "
+                f"GATE={gate:4.2f} | "
+                f"dELE={delta_ele:+.5f} | "
+                f"dAIL={delta_ail:+.5f}"
             )
 
+            next_print += 2.5
 
-            next_print += 5.0
-
-
-        # ====================================================
+        # ----------------------------------------------------
         # FAILURE
-        #
-        # Ignore parent "success" termination.
-        #
-        # Parent criterion is still ±10 ft.
-        # We want ±5 ft.
-        # ====================================================
-
-        if (
-            terminated
-            and
-            not info[
-                "success"
-            ]
-        ):
-
-            failed = True
+        # ----------------------------------------------------
+        if terminated and not info["success"]:
+            physical_failure = True
             break
-
-
-        # Parent can return terminated=True because its old
-        # success condition was reached.
-        #
-        # We intentionally continue simulation.
-
-
-        if altitude > 360.0:
-
-            failed = True
-            break
-
-
-        if altitude < 250.0 and t > 70.0:
-
-            failed = True
-            break
-
 
         if drift > 15.0:
-
-            failed = True
+            physical_failure = True
             break
 
-
-        # Once strict success is maintained 10 seconds,
-        # this bias is good enough.
-        if strict_success:
-
+        if altitude > 350.0:
+            physical_failure = True
             break
-
 
     env.close()
 
+    # Fallback in case 100 ft was never reached.
+    if early_path_at_100 is None:
+        early_path_at_100 = float(
+            last_info.get("path", 999.0)
+        )
+        drift_at_100 = float(
+            last_info.get("drift", 999.0)
+        )
+        horizontal_speed_at_100 = float(
+            np.hypot(
+                float(last_info.get("vn", 999.0)),
+                float(last_info.get("ve", 999.0)),
+            )
+        )
+        time_at_100 = total_time
+        early_s_index = 999.0
+        physical_failure = True
 
-    # ========================================================
-    # RESULT
-    # ========================================================
+    final_drift = float(
+        last_info.get("drift", 999.0)
+    )
 
-    if (
-        min_alt_after_55
-        ==
-        float("inf")
-    ):
+    max_drift_total = float(
+        last_info.get("max_drift", 999.0)
+    )
 
-        min_alt_after_55 = altitude
+    final_path = float(
+        last_info.get("path", 999.0)
+    )
 
+    # --------------------------------------------------------
+    # SCORE
+    #
+    # Main target is a genuinely straight first 100 ft:
+    #
+    # 1) low max displacement
+    # 2) low traveled XY path
+    # 3) low S/meandering index
+    # 4) low residual horizontal speed at 100 ft
+    # --------------------------------------------------------
+    score = (
+        200.0 * early_max_drift
+        + 80.0 * early_path_at_100
+        + 100.0 * early_s_index
+        + 60.0 * horizontal_speed_at_100
+        + 10.0 * max_drift_total
+    )
 
-    if (
-        max_alt_after_55
-        ==
-        -float("inf")
-    ):
-
-        max_alt_after_55 = altitude
-
+    if physical_failure:
+        score += 1e9
 
     return {
-
-        "bias":
-            collective_bias,
-
-        "success":
-            strict_success,
-
-        "failed":
-            failed,
-
-        "time":
-            t,
-
-        "altitude":
-            altitude,
-
-        "altitude_error":
-            altitude_error,
-
-        "vertical_speed":
-            vertical_speed,
-
-        "max_drift":
-            max_drift,
-
-        "final_drift":
-            drift,
-
-        "path":
-            path,
-
-        "north":
-            float(
-                info["north"]
-            ),
-
-        "east":
-            float(
-                info["east"]
-            ),
-
-        "vn":
-            vn,
-
-        "ve":
-            ve,
-
-        "min_alt_after_55":
-            min_alt_after_55,
-
-        "max_alt_after_55":
-            max_alt_after_55,
+        "kp": kp,
+        "kd": kd,
+        "a_max": a_max,
+        "delta_max": delta_max,
+        "failed": physical_failure,
+        "score": score,
+        "early_max_drift": early_max_drift,
+        "path100": early_path_at_100,
+        "drift100": drift_at_100,
+        "hs100": horizontal_speed_at_100,
+        "s_index": early_s_index,
+        "time100": time_at_100,
+        "max_drift_total": max_drift_total,
+        "final_drift": final_drift,
+        "final_path": final_path,
+        "final_alt": altitude,
     }
 
 
 # ============================================================
-# SWEEP
+# BASELINE
 # ============================================================
 
-print("=" * 120)
+print("=" * 130)
+print("STAGE 1 EARLY-TAKEOFF XY STRAIGHTNESS CALIBRATION")
+print("=" * 130)
+
+print("\nBase model:")
+print(MODEL_PATH)
 
 print(
-    "STAGE 1 ALTITUDE BIAS CALIBRATION"
-)
-
-print("=" * 120)
-
-
-print(
-    "\nModel:"
-)
-
-print(
-    MODEL_PATH
-)
-
-
-print(
-    "\nTarget altitude:",
-    TARGET_ALTITUDE,
-    "ft"
-)
-
-
-print(
-    "\nXY controller: NONE"
+    "\nGoal: remove the visible S-shaped motion "
+    "during the first 100 ft."
 )
 
 print(
-    "Teacher: NONE"
-)
-
-print(
-    "Flight model: SINGLE 4-ACTION PPO"
+    "Main metrics: MAX DRIFT <100 ft, XY PATH at 100 ft, "
+    "S-INDEX = path100 - drift100."
 )
 
 
-print("\n")
-print("=" * 120)
-
-print(
-    "BIAS SWEEP"
-)
-
-print("=" * 120)
-
+# ============================================================
+# GRID SEARCH
+# ============================================================
 
 results = []
 
+total_candidates = (
+    len(KP_VALUES)
+    *
+    len(KD_VALUES)
+    *
+    len(A_MAX_VALUES)
+    *
+    len(DELTA_MAX_VALUES)
+)
 
-for bias in COLLECTIVE_BIASES:
-
-    result = run_bias(
-        bias,
-        detailed=False
-    )
-
-
-    results.append(
-        result
-    )
-
-
-    if result["success"]:
-
-        icon = "🏆"
-
-    elif result["failed"]:
-
-        icon = "❌"
-
-    else:
-
-        icon = "✅"
+print(
+    f"\nTesting {total_candidates} candidates..."
+)
+print()
 
 
-    print(
-        f"{icon} "
-        f"BIAS={bias:+.4f} | "
-        f"ALT={result['altitude']:7.2f} | "
-        f"ERR={result['altitude_error']:5.2f} | "
-        f"VS={result['vertical_speed']:6.2f} | "
-        f"MAX={result['max_drift']:5.2f} | "
-        f"FINAL={result['final_drift']:5.2f} | "
-        f"PATH={result['path']:5.2f} | "
-        f"ALT55+=["
-        f"{result['min_alt_after_55']:.2f}, "
-        f"{result['max_alt_after_55']:.2f}]"
-    )
+counter = 0
+
+for kp in KP_VALUES:
+    for kd in KD_VALUES:
+        for a_max in A_MAX_VALUES:
+            for delta_max in DELTA_MAX_VALUES:
+                counter += 1
+
+                r = run_candidate(
+                    kp=kp,
+                    kd=kd,
+                    a_max=a_max,
+                    delta_max=delta_max,
+                    total_time=QUICK_TIME,
+                    detailed=False,
+                )
+
+                results.append(r)
+
+                if (
+                    counter % 15 == 0
+                    or r["early_max_drift"] < 2.0
+                ):
+                    print(
+                        f"{counter:3d}/{total_candidates} | "
+                        f"KP={kp:.3f} "
+                        f"KD={kd:.2f} "
+                        f"AMAX={a_max:.2f} "
+                        f"DMAX={delta_max:.3f} | "
+                        f"EARLY_MAX={r['early_max_drift']:.3f} | "
+                        f"PATH100={r['path100']:.3f} | "
+                        f"DRIFT100={r['drift100']:.3f} | "
+                        f"S={r['s_index']:.3f} | "
+                        f"HS100={r['hs100']:.3f}"
+                    )
 
 
 # ============================================================
 # RANK
 # ============================================================
 
-def score(
-    result
-):
-
-    # Primary:
-    # altitude accuracy
-
-    # Then:
-    # low vertical speed
-
-    # Then:
-    # preserve XY geometry
-
-    return (
-
-        20.0
-        *
-        result[
-            "altitude_error"
-        ]
-
-        +
-
-        5.0
-        *
-        abs(
-            result[
-                "vertical_speed"
-            ]
-        )
-
-        +
-
-        3.0
-        *
-        result[
-            "max_drift"
-        ]
-
-        +
-
-        result[
-            "path"
-        ]
-    )
-
-
 results.sort(
-    key=score
+    key=lambda r: r["score"]
 )
-
 
 print("\n")
-print("=" * 120)
+print("=" * 130)
+print("TOP 15 EARLY-TAKEOFF CONTROLLERS")
+print("=" * 130)
 
-print(
-    "RANKED RESULTS"
-)
-
-print("=" * 120)
-
-
-for i, result in enumerate(
-    results,
-    start=1
+for i, r in enumerate(
+    results[:15],
+    start=1,
 ):
-
     print(
         f"{i:2d}. "
-        f"BIAS={result['bias']:+.4f} | "
-        f"SUCCESS={str(result['success']):5s} | "
-        f"ALT={result['altitude']:7.2f} | "
-        f"ERR={result['altitude_error']:5.2f} | "
-        f"VS={result['vertical_speed']:6.2f} | "
-        f"MAX={result['max_drift']:5.2f} | "
-        f"FINAL={result['final_drift']:5.2f} | "
-        f"PATH={result['path']:5.2f}"
+        f"KP={r['kp']:.3f} | "
+        f"KD={r['kd']:.2f} | "
+        f"AMAX={r['a_max']:.2f} | "
+        f"DMAX={r['delta_max']:.3f} | "
+        f"EARLY_MAX={r['early_max_drift']:.3f} | "
+        f"PATH100={r['path100']:.3f} | "
+        f"DRIFT100={r['drift100']:.3f} | "
+        f"S={r['s_index']:.3f} | "
+        f"HS100={r['hs100']:.3f} | "
+        f"TOTAL_MAX={r['max_drift_total']:.3f}"
     )
 
 
 # ============================================================
-# DETAILED BEST
+# DETAILED BEST — 120 SEC
+#
+# This verifies that the early correction fades out cleanly and
+# does not damage the already-solved hover.
 # ============================================================
 
 best = results[0]
 
-
 print("\n")
-print("=" * 120)
+print("=" * 130)
+print("DETAILED BEST — FULL 120 SECOND VALIDATION")
+print("=" * 130)
 
 print(
-    "DETAILED BEST ALTITUDE CALIBRATION"
+    f"KP        = {best['kp']}"
 )
-
-print("=" * 120)
-
-
 print(
-    "BIAS =",
-    best["bias"]
+    f"KD        = {best['kd']}"
 )
-
-
+print(
+    f"A_MAX     = {best['a_max']}"
+)
+print(
+    f"DELTA_MAX = {best['delta_max']}"
+)
 print()
 
 
-best_detailed = run_bias(
-    best["bias"],
-    detailed=True
+best_full = run_candidate(
+    kp=best["kp"],
+    kd=best["kd"],
+    a_max=best["a_max"],
+    delta_max=best["delta_max"],
+    total_time=120.0,
+    detailed=True,
 )
 
 
 print("\n")
-print("=" * 120)
+print("=" * 130)
+print("BEST FULL RESULT")
+print("=" * 130)
 
 print(
-    "FINAL BEST RESULT"
-)
-
-print("=" * 120)
-
-
-print(
-    "STRICT SUCCESS :",
-    best_detailed[
-        "success"
-    ]
-)
-
-
-print(
-    "BIAS           :",
-    best_detailed[
-        "bias"
-    ]
-)
-
-
-print(
-    "TIME           :",
+    "EARLY MAX DRIFT (<100 ft) :",
     round(
-        best_detailed[
-            "time"
-        ],
-        2
+        best_full["early_max_drift"],
+        3,
     ),
-    "s"
+    "ft",
 )
-
 
 print(
-    "ALTITUDE       :",
+    "XY PATH AT 100 ft         :",
     round(
-        best_detailed[
-            "altitude"
-        ],
-        2
+        best_full["path100"],
+        3,
     ),
-    "ft"
+    "ft",
 )
-
 
 print(
-    "ALT ERROR      :",
+    "DRIFT AT 100 ft           :",
     round(
-        best_detailed[
-            "altitude_error"
-        ],
-        2
+        best_full["drift100"],
+        3,
     ),
-    "ft"
+    "ft",
 )
-
 
 print(
-    "VERTICAL SPEED :",
+    "S-INDEX                    :",
     round(
-        best_detailed[
-            "vertical_speed"
-        ],
-        3
+        best_full["s_index"],
+        3,
     ),
-    "ft/s"
+    "ft",
 )
-
 
 print(
-    "MAX DRIFT      :",
+    "HORIZONTAL SPEED @100 ft  :",
     round(
-        best_detailed[
-            "max_drift"
-        ],
-        2
+        best_full["hs100"],
+        3,
     ),
-    "ft"
+    "ft/s",
 )
-
 
 print(
-    "FINAL DRIFT    :",
+    "TOTAL MAX DRIFT            :",
     round(
-        best_detailed[
-            "final_drift"
-        ],
-        2
+        best_full["max_drift_total"],
+        3,
     ),
-    "ft"
+    "ft",
 )
-
 
 print(
-    "PATH           :",
+    "FINAL DRIFT                :",
     round(
-        best_detailed[
-            "path"
-        ],
-        2
+        best_full["final_drift"],
+        3,
     ),
-    "ft"
+    "ft",
 )
-
 
 print(
-    "NORTH          :",
+    "FINAL XY PATH              :",
     round(
-        best_detailed[
-            "north"
-        ],
-        3
+        best_full["final_path"],
+        3,
     ),
-    "ft"
+    "ft",
 )
-
 
 print(
-    "EAST           :",
+    "FINAL ALTITUDE             :",
     round(
-        best_detailed[
-            "east"
-        ],
-        3
+        best_full["final_alt"],
+        3,
     ),
-    "ft"
+    "ft",
 )
 
 
+# ============================================================
+# PRESENTATION-QUALITY EARLY TAKEOFF TARGET
+# ============================================================
+
+presentation_quality = bool(
+    not best_full["failed"]
+    and best_full["early_max_drift"] <= 2.0
+    and best_full["path100"] <= 5.0
+    and best_full["drift100"] <= 1.5
+    and best_full["hs100"] <= 0.75
+    and best_full["max_drift_total"] <= 8.0
+)
+
+print()
 print(
-    "VN             :",
-    round(
-        best_detailed[
-            "vn"
-        ],
-        4
-    ),
-    "ft/s"
+    "EARLY TAKEOFF PRESENTATION QUALITY :",
+    presentation_quality,
 )
 
+if presentation_quality:
+    print(
+        "\nSUCCESS: early S-motion is sufficiently reduced."
+    )
+    print(
+        "Next step: distill this early XY teacher into "
+        "the PPO cyclic outputs."
+    )
+else:
+    print(
+        "\nNot yet clean enough."
+    )
+    print(
+        "Do NOT distill yet; refine the early controller first."
+    )
 
-print(
-    "VE             :",
-    round(
-        best_detailed[
-            "ve"
-        ],
-        4
-    ),
-    "ft/s"
-)
-
-
-print(
-    "ALT 55s+ RANGE :",
-    round(
-        best_detailed[
-            "min_alt_after_55"
-        ],
-        2
-    ),
-    "->",
-    round(
-        best_detailed[
-            "max_alt_after_55"
-        ],
-        2
-    ),
-    "ft"
-)
-
-
-print("=" * 120)
+print("=" * 130)
