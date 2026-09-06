@@ -87,7 +87,7 @@ STAGE3_SUMMARY_PATH = Path(
 )
 
 RESULT_DIR = Path(
-    "results_stage4_full_teacher_v1"
+    "results_stage4_full_teacher_v2"
 )
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -8183,7 +8183,7 @@ LOWER_SUMMARY_JSON = Path(
     "results_stage4_touchdown_quarterstep_v4/final_summary.json"
 )
 
-FULL_RESULT_DIR = Path("results_stage4_full_teacher_v1")
+FULL_RESULT_DIR = Path("results_stage4_full_teacher_v2")
 FULL_RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 TOUCHDOWN_VS_DES_HIGH = -0.10
@@ -8728,7 +8728,7 @@ def run_full_stage4_teacher(detailed=True):
                 "mode": mode,
                 "vs_des_fps": ctrl["vs_des_fps"],
                 "collective_residual": ctrl["collective_residual"],
-                "vertical_bias_effective": ctrl["vertical_bias_effective"],
+                "vertical_bias_state": ctrl["vertical_bias_state"],
                 "mapped_physical_elevator_cmd": mapped_elev,
             },
         )
