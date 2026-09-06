@@ -2,8 +2,8 @@ from __future__ import annotations
 
 """
 AH-1S / JSBSim
-STAGE 3 HYBRID FINAL BUILD
-==========================
+STAGE 3 HYBRID FINAL BUILD V2
+=============================
 
 Method
 ------
@@ -2000,11 +2000,12 @@ class HelicopterEnvStage3Hybrid(
             except Exception:
                 pass
 
-        self.stage2_obs = np.asarray(
-            self.env2._get_obs(),
-            dtype=np.float32,
-        )
-
+        # IMPORTANT:
+        # Do not refresh Stage-2 observation here. The original locked
+        # Stage-3 V3 loop first updates env2.forward_distance from the TRUE
+        # inertial mission geometry, then calls _get_obs(). Reversing that
+        # order leaves Stage-2 bookkeeping stale and changes the neural
+        # base action used by the teacher.
         return action
 
     def _info(
@@ -2112,6 +2113,33 @@ class HelicopterEnvStage3Hybrid(
 
         self.last_state = (
             state.copy()
+        )
+
+        # Reproduce the exact bookkeeping order used by the already
+        # validated Stage-3 V3 teacher:
+        #
+        #   raw_cycle(...)
+        #   snapshot(...)
+        #   env2.forward_distance = true inertial forward position
+        #   env2.steps += 1
+        #   obs2 = env2._get_obs()
+        #
+        # env2.steps was already incremented in _apply_action(); the missing
+        # forward-distance update was the reproduction bug in the first
+        # build_stage3_hybrid_final.py.
+        if hasattr(
+            self.env2,
+            "forward_distance",
+        ):
+            self.env2.forward_distance = float(
+                state[
+                    "forward_ft"
+                ]
+            )
+
+        self.stage2_obs = np.asarray(
+            self.env2._get_obs(),
+            dtype=np.float32,
         )
 
         abs_position_error = abs(
