@@ -1,0 +1,35 @@
+{
+  "reached_300": true,
+  "failure": false,
+  "termination_reason": "",
+  "handoff_alt": 298.62498299105937,
+  "handoff_vs": 0.04088564165886075,
+  "handoff_drift": 1.213243982921526,
+  "min_alt": 298.23760787210904,
+  "max_alt": 302.4861998001934,
+  "max_drop": 0.38737511895033094,
+  "max_cross": 3.7677254797220923,
+  "max_abs_lat": 0.7976217771005418,
+  "max_abs_heading_deg": 0.3153904965955702,
+  "max_abs_roll_deg": 2.9549390794935864,
+  "crossing_alt": 301.1428883924036,
+  "crossing_vs": -0.43307423011984125,
+  "crossing_cross": 3.558052709604292,
+  "crossing_ground": 299.86721055089913,
+  "crossing_heading_deg": -0.05080203443994954,
+  "crossing_lat": 0.7976217771005418,
+  "action_min": [
+    -0.7966839075088501,
+    -0.03896665573120117,
+    -0.23000000417232513,
+    0.0
+  ],
+  "action_max": [
+    -0.3316918611526489,
+    0.013460421934723854,
+    -0.23000000417232513,
+    0.0
+  ],
+  "presentation_pass": true,
+  "margin_pass": true
+}

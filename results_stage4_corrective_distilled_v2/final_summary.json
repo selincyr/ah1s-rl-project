@@ -1,0 +1,34 @@
+{
+  "training_type": "DAgger-style corrective policy distillation / centered weighted ridge collective-head refit",
+  "reinforcement_learning_used": false,
+  "base_model": "models_stage4_distilled_bc_v1/AH1S_STAGE4_BC_DISTILLED.zip",
+  "output_model": "models_stage4_corrective_distilled_v2/AH1S_STAGE4_CORRECTIVE_DISTILLED_V2.zip",
+  "changed_actor_scope": "action_net row 0 only (collective)",
+  "non_collective_actor_rows_changed": false,
+  "normalization_changed": false,
+  "physical_action_mapping_changed": false,
+  "validation_rollout_id": 5,
+  "selected": {
+    "dagger_global_weight": 6.0,
+    "ridge_factor": 1e-07,
+    "lambda": 0.0013035797445816505,
+    "nominal_val_collective_norm_rmse": 0.005533335774121955,
+    "dagger_val_collective_norm_rmse": 0.045920937881358946,
+    "dagger_improvement_fraction": 0.7733979183510534,
+    "score": 0.04868760576841993,
+    "feasible": true
+  },
+  "baseline": {
+    "nominal_val_collective_norm_rmse": 0.002020685700699687,
+    "dagger_val_collective_norm_rmse": 0.20265011489391327,
+    "dagger_val_collective_physical_rmse": 0.007194075267761946
+  },
+  "corrected": {
+    "nominal_val_collective_norm_rmse": 0.005533338524401188,
+    "dagger_val_collective_norm_rmse": 0.04592091962695122,
+    "dagger_val_collective_physical_rmse": 0.001630192156881094,
+    "nominal_noncollective_max_output_delta": 0.0,
+    "dagger_noncollective_max_output_delta": 0.0
+  },
+  "ready_for_teacher_off_validation": true
+}

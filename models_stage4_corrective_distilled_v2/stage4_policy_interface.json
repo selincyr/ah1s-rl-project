@@ -1,0 +1,7 @@
+{
+  "observation_dim": 26,
+  "normalization": "unchanged from BC V1",
+  "action_mapping": "unchanged from BC V1",
+  "corrective_change": "collective actor-head row 0 only",
+  "reinforcement_learning_used": false
+}

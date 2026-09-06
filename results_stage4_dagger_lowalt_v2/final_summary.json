@@ -1,0 +1,43 @@
+{
+  "training_type": "NONE",
+  "collection_type": "DAgger-style student-live / teacher-shadow corrective labeling",
+  "teacher_applied_to_live_fdm": false,
+  "student_applied_to_live_fdm": true,
+  "num_rollouts": 6,
+  "num_samples": 4868,
+  "obs_shape": [
+    4868,
+    26
+  ],
+  "action_shape": [
+    4868,
+    4
+  ],
+  "collective_delta_student_minus_teacher": {
+    "mean": -0.003298826515674591,
+    "mae": 0.003907421603798866,
+    "p95_abs": 0.009093095548450947,
+    "max_abs": 0.022992312908172607
+  },
+  "priority_weight": {
+    "min": 1.0000596046447754,
+    "mean": 3.87689208984375,
+    "max": 6.0
+  },
+  "teacher_mapping": {
+    "collective_slope": 0.03000000000000061,
+    "collective_intercept": 0.62,
+    "collective_r2": 1.0,
+    "aileron_slope": 0.025999999999999884,
+    "aileron_intercept": 0.19095000000000004,
+    "aileron_r2": 1.0,
+    "rudder_physical_median": 0.39,
+    "rows": 4040
+  },
+  "student_model": "models_stage4_corrective_distilled_v2/AH1S_STAGE4_CORRECTIVE_DISTILLED_V2.zip",
+  "targeted_phase": "descent_300_to_30 low-altitude settle approach",
+  "lowalt_save_start_ft": 70.0,
+  "lowalt_hard_floor_ft": 24.0,
+  "lowalt_min_vs_fps": -1.6,
+  "ready_for_corrective_distillation": true
+}

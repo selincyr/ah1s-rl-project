@@ -1,0 +1,24 @@
+{
+  "observation_dim": 26,
+  "observation_input": "raw Stage-4 26-D observation normalized by stage4_obs_normalization.npz",
+  "network_action_space": "4-D normalized [-1,+1]",
+  "physical_action_mapping": {
+    "collective": {
+      "low": 0.5360000133514404,
+      "high": 0.6069999933242798
+    },
+    "elevator": {
+      "low": -0.18299999833106995,
+      "high": -0.17800000309944153
+    },
+    "aileron": {
+      "low": 0.18000000715255737,
+      "high": 0.20200000703334808
+    },
+    "rudder": {
+      "low": 0.3889999985694885,
+      "high": 0.39100000262260437
+    }
+  },
+  "note": "BC/distillation only; no reward-based PPO update has occurred yet."
+}

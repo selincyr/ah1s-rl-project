@@ -1,0 +1,45 @@
+{
+  "reached_300": true,
+  "failure": false,
+  "termination_reason": "",
+  "handoff_alt": 298.62498299105937,
+  "handoff_vs": 0.04088564165886075,
+  "handoff_drift": 1.213243982921526,
+  "min_alt": 298.2213786097004,
+  "max_alt": 302.4396866905645,
+  "max_drop": 0.40360438135894583,
+  "max_cross": 3.7688638831158725,
+  "max_abs_lat": 0.7973756474267244,
+  "max_abs_heading_deg": 0.31517282112301226,
+  "max_abs_roll_deg": 2.9548880498334604,
+  "crossing_alt": 301.086180919041,
+  "crossing_vs": -0.43483203991709163,
+  "crossing_cross": 3.554563482514678,
+  "crossing_ground": 299.8399434990321,
+  "crossing_heading_deg": -0.050892827499809,
+  "crossing_lat": 0.7973756474267244,
+  "action_min": [
+    -0.7969369292259216,
+    -0.03907743841409683,
+    -0.23000000417232513,
+    0.0
+  ],
+  "action_max": [
+    -0.3319259285926819,
+    0.013269571587443352,
+    -0.23000000417232513,
+    0.0
+  ],
+  "presentation_pass": true,
+  "margin_pass": true,
+  "training_method": "teacher-assisted behavior cloning/distillation + PPO reinforcement-learning fine-tuning",
+  "teacher_runtime": false,
+  "final_model": "models_stage2_hybrid_final/AH1S_STAGE2_HYBRID_FINAL.zip",
+  "selected_rl_lr": 1e-06,
+  "selected_rl_timesteps": 1024,
+  "selected_teacher_cfg": {
+    "kp_alt": 0.012,
+    "kd_vs": 0.06,
+    "max_collective_correction": 0.09
+  }
+}

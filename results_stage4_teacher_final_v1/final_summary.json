@@ -1,0 +1,98 @@
+{
+  "pass": true,
+  "same_fdm": true,
+  "clock_reset_on_attach": false,
+  "mission_time_s": 598.1249999999975,
+  "presentation_pass": true,
+  "max_abs_position_error_ft": 2.445177319179834,
+  "max_abs_cross_track_ft": 3.0334451866665693,
+  "max_abs_heading_error_deg": 0.5786883939930101,
+  "min_altitude_ft": 6.760269988933487,
+  "min_vertical_speed_fps": -1.0303204074246306,
+  "pre_descent_hold_s": 5.025000000000007,
+  "hover9_s": 5.025000000000007,
+  "touchdown_first_contact": {
+    "mission_time_s": 593.0999999999945,
+    "touchdown_elapsed_s": 75.825,
+    "altitude_ft": 6.764561399282684,
+    "vertical_speed_fps": -0.023917506029706773,
+    "forward_ft": 297.5549860998766,
+    "position_error_ft": 2.4450139001233993,
+    "forward_speed_fps": 0.00015613985041741836,
+    "cross_track_ft": -0.37667427879787313,
+    "lateral_speed_fps": -0.46696464991010433,
+    "heading_error_deg": -0.4346347853859718,
+    "physical_collective_cmd": 0.5412943686705687,
+    "ramp_baseline_collective": 0.5411944441249613,
+    "max_compression_ft": 0.0005774783819237974
+  },
+  "touchdown_vs_ok": true,
+  "landed_hold_s": 5.025000000000007,
+  "bounce": false,
+  "final_wow": true,
+  "final_compression_ft": 0.0002519666616175286,
+  "final_altitude_ft": 6.766330780908447,
+  "final_vertical_speed_fps": 0.0015155706338509866,
+  "final_forward_ft": 297.7022485999334,
+  "final_position_error_ft": 2.297751400066602,
+  "final_forward_speed_fps": 0.054097943101895495,
+  "final_cross_track_ft": -1.3212735079881834,
+  "final_lateral_speed_fps": -0.019242924583377438,
+  "final_heading_error_deg": -0.4227190362943654,
+  "phase_summary": {
+    "pre_descent_hold": {
+      "duration_s": 9.824999999999996,
+      "hold_s": 5.025000000000007
+    },
+    "descent_300_to_30": {
+      "duration_s": 302.99999999997544,
+      "final_altitude_ft": 31.227843019538795,
+      "settle_hold_s": 5.025000000000007
+    },
+    "near_ground_30_to_native_eq": {
+      "duration_s": 101.24999999998465,
+      "final_altitude_ft": 17.236181974184092,
+      "final_vertical_speed_fps": -0.03959160108857647
+    },
+    "capture_to_9ft": {
+      "duration_s": 103.12499999998835,
+      "final_altitude_ft": 9.41290140953106,
+      "hover_hold_s": 5.025000000000007,
+      "upper_curve_local_r2": 0.9887209376064834
+    },
+    "continuous_touchdown": {
+      "duration_s": 75.90000000004602,
+      "contact": {
+        "mission_time_s": 593.0999999999945,
+        "touchdown_elapsed_s": 75.825,
+        "altitude_ft": 6.764561399282684,
+        "vertical_speed_fps": -0.023917506029706773,
+        "forward_ft": 297.5549860998766,
+        "position_error_ft": 2.4450139001233993,
+        "forward_speed_fps": 0.00015613985041741836,
+        "cross_track_ft": -0.37667427879787313,
+        "lateral_speed_fps": -0.46696464991010433,
+        "heading_error_deg": -0.4346347853859718,
+        "physical_collective_cmd": 0.5412943686705687,
+        "ramp_baseline_collective": 0.5411944441249613,
+        "max_compression_ft": 0.0005774783819237974
+      },
+      "measured_reference_contact_altitude_ft": 6.762364535088182,
+      "measured_reference_contact_collective": 0.5411944441249613
+    },
+    "landed_hold": {
+      "duration_s": 5.025000000003047,
+      "hold_s": 5.025000000000007,
+      "bounce": false,
+      "final_wow": true,
+      "final_compression_ft": 0.0002519666616175286
+    }
+  },
+  "landed_target_collective": 0.540944,
+  "lower_curve_raw_point_count": 37,
+  "lower_curve_projected_point_count": 31,
+  "stage4_training": "NONE",
+  "teacher_locked": true,
+  "locked_landed_target_collective": 0.540944,
+  "ready_for_stage4_teacher_rollout_collection": true
+}

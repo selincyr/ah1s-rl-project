@@ -1,0 +1,154 @@
+{
+  "stage4_training": "NONE",
+  "collection_method": "locked teacher, same FDM, qualified Stage-4 entry-state variation",
+  "teacher_file": "build_stage4_teacher_final_v1.py",
+  "locked_landed_target_collective": 0.540944,
+  "rollout_configs": [
+    {
+      "entry_forward_ft": 294.0,
+      "entry_max_speed_fps": 1.0
+    },
+    {
+      "entry_forward_ft": 295.0,
+      "entry_max_speed_fps": 1.0
+    },
+    {
+      "entry_forward_ft": 296.0,
+      "entry_max_speed_fps": 1.0
+    },
+    {
+      "entry_forward_ft": 297.0,
+      "entry_max_speed_fps": 1.0
+    },
+    {
+      "entry_forward_ft": 298.0,
+      "entry_max_speed_fps": 1.0
+    },
+    {
+      "entry_forward_ft": 299.0,
+      "entry_max_speed_fps": 1.0
+    }
+  ],
+  "handoff_parameters_wired": true,
+  "handoff_wiring_fix_version": "V3 actual run_full_stage4_teacher call",
+  "handoff_entry_forward_values_ft": [
+    294.0,
+    295.0,
+    296.0,
+    297.0,
+    298.0,
+    299.0
+  ],
+  "requested_rollouts": 6,
+  "passing_rollouts": 6,
+  "num_samples": 47651,
+  "obs_dim": 26,
+  "action_dim": 4,
+  "observation_features": [
+    "altitude_ft",
+    "vertical_speed_fps",
+    "position_error_ft",
+    "forward_speed_fps",
+    "cross_track_ft",
+    "lateral_speed_fps",
+    "heading_sin",
+    "heading_cos",
+    "pitch_rad",
+    "roll_rad",
+    "roll_rate_rad_s",
+    "pitch_rate_rad_s",
+    "yaw_rate_rad_s",
+    "rotor_rpm",
+    "physical_collective_cmd",
+    "physical_elevator_cmd",
+    "physical_aileron_cmd",
+    "physical_rudder_cmd",
+    "wow",
+    "compression_ft",
+    "phase_pre_descent_hold",
+    "phase_descent_300_to_30",
+    "phase_near_ground_30_to_native_eq",
+    "phase_capture_to_9ft",
+    "phase_continuous_touchdown",
+    "phase_landed_hold"
+  ],
+  "target_features": [
+    "target_physical_collective_cmd",
+    "target_physical_elevator_cmd",
+    "target_physical_aileron_cmd",
+    "target_physical_rudder_cmd"
+  ],
+  "phase_names": [
+    "pre_descent_hold",
+    "descent_300_to_30",
+    "near_ground_30_to_native_eq",
+    "capture_to_9ft",
+    "continuous_touchdown",
+    "landed_hold"
+  ],
+  "phase_counts": {
+    "pre_descent_hold": 617,
+    "descent_300_to_30": 24196,
+    "near_ground_30_to_native_eq": 8100,
+    "capture_to_9ft": 8259,
+    "continuous_touchdown": 6077,
+    "landed_hold": 402
+  },
+  "target_stats": {
+    "target_physical_collective_cmd": {
+      "min": 0.5408457517623901,
+      "max": 0.6059461236000061,
+      "mean": 0.5856276750564575,
+      "std": 0.019377466291189194,
+      "p01": 0.54094398021698,
+      "p99": 0.6057982444763184
+    },
+    "target_physical_elevator_cmd": {
+      "min": -0.18143808841705322,
+      "max": -0.17859986424446106,
+      "mean": -0.17971175909042358,
+      "std": 0.0005612709792330861,
+      "p01": -0.1807096302509308,
+      "p99": -0.1787204146385193
+    },
+    "target_physical_aileron_cmd": {
+      "min": 0.18185466527938843,
+      "max": 0.20039914548397064,
+      "mean": 0.19167335331439972,
+      "std": 0.003927099518477917,
+      "p01": 0.1822936087846756,
+      "p99": 0.2001170814037323
+    },
+    "target_physical_rudder_cmd": {
+      "min": 0.38999998569488525,
+      "max": 0.3901384770870209,
+      "mean": 0.39000165462493896,
+      "std": 1.4728868336533196e-05,
+      "p01": 0.38999998569488525,
+      "p99": 0.3901265561580658
+    }
+  },
+  "alignment": "trace state at row i paired with physical teacher command at row i+1; decision phase is phase(row i+1)",
+  "canonical_action_representation": "raw physical actuator commands; no mixed normalized action0/action1 semantics",
+  "sample_weighting": "sqrt inverse decision-phase frequency, normalized to mean 1",
+  "rollout_obs_hashes": {
+    "0": "1dab83b501cbfbc3327fb95214e6dbb489d5f5eb9360350989841e96d81820c4",
+    "1": "ed56dde9a855f4ec1368aef9c81e8b8840a28d664725cdf3a290350e34467530",
+    "2": "d3c123bbf67f274ce7ed8f8924e14124291c6b2adef1f63ea51ef8afbdb88d53",
+    "3": "e04cc4f16b73901df501e5d3a3cd2f6869fd0a57b4013ad6c0c078e9d98a9081",
+    "4": "87b7ef6d35792a713a8eb466dcb24c19fd430d0de93629af41ce502c04ec2fd1",
+    "5": "66ec0ef2b85a9df5a5c7b4b2425caabea3fb0ab6e548e4586606ea876ea50e4e"
+  },
+  "rollout_action_hashes": {
+    "0": "f3d72358789129fc8c7ab2902bc43a47190bc396cb32540e8e265eff6a33c75f",
+    "1": "85b80938311c68b6debc97a53a70c0b5076e49c50383eeac53e5f9b20daad0db",
+    "2": "b2149976ed9a18ff063da45c2066c995aa22444e25b9b2485a1adbbb2c0f1a35",
+    "3": "b440ec082988a3676236f2ad86bbae123c17535ce8a7a0c92fc837f2cda2db16",
+    "4": "520f0e8d0dfff48229fd401a1cf04feff170489cd9a0a338f5fc8059ee58744f",
+    "5": "6be82aa4ab46c27847b60864e71ff0b85010792396fd62bea511b2947b3f7e98"
+  },
+  "distinct_observation_rollouts": 6,
+  "distinct_action_rollouts": 6,
+  "rollout_diversity_ok": true,
+  "ready_for_bc": true
+}
