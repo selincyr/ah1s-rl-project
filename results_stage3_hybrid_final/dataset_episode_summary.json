@@ -1,0 +1,79 @@
+[
+  {
+    "episode": 1,
+    "noise_std": 0.0,
+    "stored": 832,
+    "noise_steps": 0,
+    "safety_failure": "",
+    "final_forward_ft": 301.6820227518437,
+    "final_cross_ft": 0.09379399011379033,
+    "final_alt_ft": 299.3450750942552,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 2,
+    "noise_std": 0.01,
+    "stored": 834,
+    "noise_steps": 834,
+    "safety_failure": "",
+    "final_forward_ft": 301.7584895456212,
+    "final_cross_ft": 0.07108288750083334,
+    "final_alt_ft": 299.3517490292943,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 3,
+    "noise_std": 0.015,
+    "stored": 833,
+    "noise_steps": 833,
+    "safety_failure": "",
+    "final_forward_ft": 301.75207083596,
+    "final_cross_ft": 0.1590506699237565,
+    "final_alt_ft": 299.4088955620441,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 4,
+    "noise_std": 0.02,
+    "stored": 838,
+    "noise_steps": 838,
+    "safety_failure": "",
+    "final_forward_ft": 301.94417813554486,
+    "final_cross_ft": -0.019323086615085396,
+    "final_alt_ft": 299.30396051400794,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 5,
+    "noise_std": 0.025,
+    "stored": 829,
+    "noise_steps": 829,
+    "safety_failure": "",
+    "final_forward_ft": 301.58896402837564,
+    "final_cross_ft": 0.08576350590188708,
+    "final_alt_ft": 299.28238771300903,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 6,
+    "noise_std": 0.015,
+    "stored": 832,
+    "noise_steps": 832,
+    "safety_failure": "",
+    "final_forward_ft": 301.69096425530296,
+    "final_cross_ft": 0.060004290362456074,
+    "final_alt_ft": 299.3741513685286,
+    "final_hover_hold_s": 5.025000000000007
+  },
+  {
+    "episode": 7,
+    "noise_std": 0.01,
+    "stored": 830,
+    "noise_steps": 830,
+    "safety_failure": "",
+    "final_forward_ft": 301.62784701724775,
+    "final_cross_ft": 0.11058044548325718,
+    "final_alt_ft": 299.3719071089963,
+    "final_hover_hold_s": 5.025000000000007
+  }
+]
