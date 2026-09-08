@@ -108,12 +108,12 @@ stage2_model = ns[
     "stage2_model"
 ]
 
-
+################# KAÇ DERECE DÖNMELİYİM ? VE NE HIZLA DÖNMELİYİMMM(45 DERECE İÇİN GEREKEN YAPI ŞİMİLİK BU)
 # =====================================================================
 # TURN TARGET / CONTROLLER
 # =====================================================================
 
-TARGET_DELTA_HEADING_DEG = 5.0
+TARGET_DELTA_HEADING_DEG = 10.0
 
 # Identified safe coordinated seed:
 MAX_POSITIVE_AILERON_DELTA = 0.30
@@ -121,7 +121,7 @@ MAX_NEGATIVE_RUDDER_DELTA = 1.00
 
 # Allow modest reverse authority for overshoot correction.
 MAX_REVERSE_AILERON_DELTA = 0.20
-MAX_REVERSE_RUDDER_DELTA = 0.03
+MAX_REVERSE_RUDDER_DELTA = 0.20
 
 # Heading feedback.
 #
@@ -274,19 +274,18 @@ def controller(
     # Positive heading error needs negative rudder residual.
     # Positive yaw rate damps that command as target approaches.
     # -------------------------------------------------------------
+    desired_yaw_rate_deg_s = (
+        np.clip(
+            1.20 * heading_error_deg,
+            -1.50,
+            +1.50,
+        )
+
+    )
 
     delta_a3 = (
-        -
-        HEADING_KP_RUDDER
-        *
-        heading_error_deg
-        +
-        YAW_RATE_KD_RUDDER
-        *
-        yaw_rate_deg_s
-    )
-    if 0.0 < heading_error_deg < 1.0:
-        delta_a3 -= 0.10
+        -1.60*(desired_yaw_rate_deg_s - yaw_rate_deg_s)
+    )    
     
     delta_a3 = float(
         np.clip(
