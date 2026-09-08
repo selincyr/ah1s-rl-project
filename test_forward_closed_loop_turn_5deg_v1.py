@@ -1,4 +1,4 @@
-####%%writefile /content/ah1s-rl-project/test_forward_closed_loop_turn_5deg_v1.py
+%%writefile /content/ah1s-rl-project/test_forward_closed_loop_turn_5deg_v1.py
 from pathlib import Path
 import csv
 import json
@@ -128,17 +128,17 @@ MAX_REVERSE_RUDDER_DELTA = 0.03
 # At +5 deg error:
 #   -0.12 * 5 = -0.60
 # which exactly reproduces the selected safe rudder seed.
-HEADING_KP_RUDDER = 1.20
+HEADING_KP_RUDDER = 1.50
 
 # Positive yaw rate means we are already rotating toward +heading.
 # This term reduces the negative rudder command before target crossing.
-YAW_RATE_KD_RUDDER = 0.20
+YAW_RATE_KD_RUDDER = 0.70
 
 # Lateral residual follows turn demand.
 # At +5 deg error:
 #   +0.06 * 5 = +0.30
 # which exactly reproduces selected coord_ap30_rm060.
-HEADING_KP_AILERON = 0.0
+HEADING_KP_AILERON = 0.00
 
 # Small roll-leveling contribution.
 # Positive delta_a2 was measured to move roll in the positive direction.
@@ -285,7 +285,9 @@ def controller(
         *
         yaw_rate_deg_s
     )
-
+    if 0.0 < heading_error_deg < 1.0:
+        delta_a3 -= 0.10
+    
     delta_a3 = float(
         np.clip(
             delta_a3,
@@ -422,7 +424,8 @@ start = build_forward_entry()
 
 try:
     env2 = start["env2"]
-    env2.mapped_rudder_scale = 0.125
+    env2.mapped_rudder_scale = 0.180
+    env2.mapped_aileron_scale = 0.026
     fdm = start["fdm"]
     lat0 = start["lat0"]
     lon0 = start["lon0"]
