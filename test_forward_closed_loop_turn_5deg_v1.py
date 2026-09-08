@@ -1,3 +1,4 @@
+%%writefile /content/ah1s-rl-project/test_forward_closed_loop_turn_5deg_v1.py
 from pathlib import Path
 import csv
 import json
@@ -89,6 +90,7 @@ exec(
     ),
     ns,
 )
+ns["TURN_ENTRY_FORWARD_FT"] = 160.0
 
 build_forward_entry = ns[
     "build_forward_entry"
@@ -115,39 +117,39 @@ TARGET_DELTA_HEADING_DEG = 5.0
 
 # Identified safe coordinated seed:
 MAX_POSITIVE_AILERON_DELTA = 0.30
-MAX_NEGATIVE_RUDDER_DELTA = 0.60
+MAX_NEGATIVE_RUDDER_DELTA = 1.00
 
 # Allow modest reverse authority for overshoot correction.
 MAX_REVERSE_AILERON_DELTA = 0.20
-MAX_REVERSE_RUDDER_DELTA = 0.35
+MAX_REVERSE_RUDDER_DELTA = 0.03
 
 # Heading feedback.
 #
 # At +5 deg error:
 #   -0.12 * 5 = -0.60
 # which exactly reproduces the selected safe rudder seed.
-HEADING_KP_RUDDER = 0.12
+HEADING_KP_RUDDER = 1.20
 
 # Positive yaw rate means we are already rotating toward +heading.
 # This term reduces the negative rudder command before target crossing.
-YAW_RATE_KD_RUDDER = 0.12
+YAW_RATE_KD_RUDDER = 0.20
 
 # Lateral residual follows turn demand.
 # At +5 deg error:
 #   +0.06 * 5 = +0.30
 # which exactly reproduces selected coord_ap30_rm060.
-HEADING_KP_AILERON = 0.06
+HEADING_KP_AILERON = 0.0
 
 # Small roll-leveling contribution.
 # Positive delta_a2 was measured to move roll in the positive direction.
-ROLL_LEVEL_KP_AILERON = 0.02
+ROLL_LEVEL_KP_AILERON = 0.0
 
 
 # =====================================================================
 # SUCCESS / SAFETY
 # =====================================================================
 
-MAX_TURN_TIME_S = 80.0
+MAX_TURN_TIME_S = 12.0
 
 TARGET_HEADING_TOL_DEG = 0.50
 TARGET_YAW_RATE_TOL_DEG_S = 0.25
@@ -159,7 +161,7 @@ TARGET_VS_TOL_FPS = 0.75
 TARGET_MAX_ABS_ROLL_DEG = 4.0
 TARGET_MIN_FORWARD_SPEED_FPS = 5.0
 
-TARGET_HOLD_SECONDS = 3.0
+TARGET_HOLD_SECONDS = 2.0
 
 
 # Broad diagnostic safety envelope, not final Stage-4 acceptance.
@@ -420,6 +422,7 @@ start = build_forward_entry()
 
 try:
     env2 = start["env2"]
+    env2.mapped_rudder_scale = 0.125
     fdm = start["fdm"]
     lat0 = start["lat0"]
     lon0 = start["lon0"]
@@ -437,6 +440,11 @@ try:
         initial["heading_error_deg"]
         +
         TARGET_DELTA_HEADING_DEG
+    )
+    env2.target_heading = (
+        mission_heading
+        +
+        math.radians(target_heading_error_deg)
     )
 
     print(
@@ -555,8 +563,6 @@ try:
 
         action[3] = float(
             np.clip(
-                action[3]
-                +
                 ctrl["delta_a3"],
                 -1.0,
                 +1.0,
