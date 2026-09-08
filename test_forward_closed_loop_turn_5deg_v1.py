@@ -1,4 +1,3 @@
-%%writefile /content/ah1s-rl-project/test_forward_closed_loop_turn_5deg_v1.py
 from pathlib import Path
 import csv
 import json
@@ -9,7 +8,7 @@ import numpy as np
 
 # =====================================================================
 # AH-1S / JSBSim
-# TRUE MISSION — FORWARD-FLIGHT CLOSED-LOOP +5 DEG TURN V1
+# TRUE MISSION — PARAMETRIC FORWARD-FLIGHT TURN TEACHER V2
 # =====================================================================
 #
 # Data-grounded seed:
@@ -39,7 +38,7 @@ import numpy as np
 AUTH_SOURCE = Path("diagnose_forward_turn_authority_v1.py")
 
 RESULT_DIR = Path(
-    "results_forward_closed_loop_turn_5deg_v1"
+    "results_forward_parametric_turn_teacher_v2"
 )
 RESULT_DIR.mkdir(
     parents=True,
@@ -78,7 +77,7 @@ prefix = source_text.split(
 )[0]
 
 ns = {
-    "__name__": "forward_turn_5deg_base",
+    "__name__": "forward_parametric_turn_base",
     "__file__": str(AUTH_SOURCE),
 }
 
@@ -113,7 +112,7 @@ stage2_model = ns[
 # TURN TARGET / CONTROLLER
 # =====================================================================
 
-TARGET_DELTA_HEADING_DEG = 10.0
+TARGET_TURN_DEG = 10.0
 
 # Identified safe coordinated seed:
 MAX_POSITIVE_AILERON_DELTA = 0.30
@@ -138,7 +137,7 @@ YAW_RATE_KD_RUDDER = 0.70
 # At +5 deg error:
 #   +0.06 * 5 = +0.30
 # which exactly reproduces selected coord_ap30_rm060.
-HEADING_KP_AILERON = 0.00
+HEADING_KP_AILERON = 0.03
 
 # Small roll-leveling contribution.
 # Positive delta_a2 was measured to move roll in the positive direction.
@@ -149,7 +148,15 @@ ROLL_LEVEL_KP_AILERON = 0.0
 # SUCCESS / SAFETY
 # =====================================================================
 
-MAX_TURN_TIME_S = 12.0
+TURN_TIME_MIN_S = 12.0
+TURN_RATE_BUDGET_DEG_S = 0.80
+TURN_SETTLE_BUDGET_S = 20.0
+
+MAX_TURN_TIME_S = max(
+    TURN_TIME_MIN_S,
+    abs(TARGET_TURN_DEG) / TURN_RATE_BUDGET_DEG_S
+    + TURN_SETTLE_BUDGET_S,
+)
 
 TARGET_HEADING_TOL_DEG = 0.50
 TARGET_YAW_RATE_TOL_DEG_S = 0.25
@@ -248,17 +255,14 @@ def safety_reason(state):
 
 def controller(
     state,
-    target_heading_error_deg,
+    remaining_turn_deg,
 ):
-    current_heading_error_deg = float(
-        state["heading_error_deg"]
-    )
-
-    heading_error_deg = wrap_deg(
-        target_heading_error_deg
-        -
-        current_heading_error_deg
-    )
+    # IMPORTANT:
+    # remaining_turn_deg is an UNWRAPPED turn error.
+    # It may be 5, 40, 180, 360, etc. and therefore must NOT
+    # be passed through wrap_deg(). This is what makes one teacher
+    # usable from small turns through a full 360-degree turn.
+    heading_error_deg = float(remaining_turn_deg)
 
     yaw_rate_deg_s = math.degrees(
         state["yaw_rate_rad_s"]
@@ -413,7 +417,7 @@ def target_state_ok(
 # =====================================================================
 
 print("=" * 120)
-print("TRUE MISSION — CLOSED-LOOP +5 DEG FORWARD-FLIGHT TURN V1")
+print("TRUE MISSION — PARAMETRIC FORWARD-FLIGHT TURN TEACHER V2")
 print("=" * 120)
 print("No descent. No landing. No PPO training.")
 print("Turn teacher is temporary and controls only lateral/yaw residuals.")
@@ -423,7 +427,7 @@ start = build_forward_entry()
 
 try:
     env2 = start["env2"]
-    env2.mapped_rudder_scale = 0.180
+    env2.mapped_rudder_scale = 0.260
     env2.mapped_aileron_scale = 0.026
     fdm = start["fdm"]
     lat0 = start["lat0"]
@@ -438,15 +442,20 @@ try:
         mission_heading,
     )
 
-    target_heading_error_deg = wrap_deg(
+    wrapped_target_heading_error_deg = wrap_deg(
         initial["heading_error_deg"]
         +
-        TARGET_DELTA_HEADING_DEG
+        TARGET_TURN_DEG
     )
+
+    # Stage-2 may observe a wrapped target heading. For a 360-degree
+    # turn this naturally lands on the entry heading again. The TURN
+    # TEACHER does not use this wrapped value for progress; it uses
+    # cumulative_heading_change_deg below.
     env2.target_heading = (
         mission_heading
         +
-        math.radians(target_heading_error_deg)
+        math.radians(wrapped_target_heading_error_deg)
     )
 
     print(
@@ -460,9 +469,8 @@ try:
     )
 
     print(
-        f"TARGET HEADING ERROR = "
-        f"{target_heading_error_deg:+.3f} deg "
-        f"(entry + {TARGET_DELTA_HEADING_DEG:.1f} deg)"
+        f"TARGET TURN = {TARGET_TURN_DEG:+.3f} deg | "
+        f"wrapped env target = {wrapped_target_heading_error_deg:+.3f} deg"
     )
 
     print()
@@ -472,6 +480,12 @@ try:
     hold_s = 0.0
     success = False
     termination = "time_limit"
+
+    # Unwrapped cumulative turn state. This survives +/-180-degree
+    # heading wrap and therefore can count all the way to 360 degrees.
+    cumulative_heading_change_deg = 0.0
+    prev_heading_error_deg = float(initial["heading_error_deg"])
+    turn_direction = 1.0 if TARGET_TURN_DEG >= 0.0 else -1.0
 
     max_heading_change_deg = 0.0
     max_abs_roll_deg = abs(
@@ -545,9 +559,15 @@ try:
             dtype=np.float32,
         ).reshape(-1)
 
+        remaining_turn_before_deg = (
+            TARGET_TURN_DEG
+            -
+            cumulative_heading_change_deg
+        )
+
         ctrl = controller(
             before,
-            target_heading_error_deg,
+            remaining_turn_before_deg,
         )
 
         action = base_action.copy()
@@ -586,15 +606,29 @@ try:
             1
         ) * dt
 
-        after_ctrl = controller(
-            state,
-            target_heading_error_deg,
+        current_heading_error_deg = float(
+            state["heading_error_deg"]
         )
 
-        heading_change_deg = wrap_deg(
-            state["heading_error_deg"]
+        heading_step_deg = wrap_deg(
+            current_heading_error_deg
             -
-            initial["heading_error_deg"]
+            prev_heading_error_deg
+        )
+
+        cumulative_heading_change_deg += heading_step_deg
+        prev_heading_error_deg = current_heading_error_deg
+
+        heading_change_deg = cumulative_heading_change_deg
+        remaining_turn_after_deg = (
+            TARGET_TURN_DEG
+            -
+            heading_change_deg
+        )
+
+        after_ctrl = controller(
+            state,
+            remaining_turn_after_deg,
         )
 
         roll_deg = math.degrees(
@@ -611,7 +645,7 @@ try:
 
         max_heading_change_deg = max(
             max_heading_change_deg,
-            heading_change_deg,
+            turn_direction * heading_change_deg,
         )
 
         max_abs_roll_deg = max(
@@ -716,8 +750,12 @@ try:
                 state["heading_error_deg"]
             ),
 
-            "target_heading_error_deg": float(
-                target_heading_error_deg
+            "target_turn_deg": float(
+                TARGET_TURN_DEG
+            ),
+
+            "wrapped_target_heading_error_deg": float(
+                wrapped_target_heading_error_deg
             ),
 
             "target_error_deg": float(
@@ -726,8 +764,16 @@ try:
                 ]
             ),
 
+            "heading_step_deg": float(
+                heading_step_deg
+            ),
+
             "heading_change_from_entry_deg": float(
                 heading_change_deg
+            ),
+
+            "cumulative_turn_deg": float(
+                cumulative_heading_change_deg
             ),
 
             "roll_deg": float(
@@ -795,6 +841,28 @@ try:
             ),
         })
 
+        # Report standard milestones once, useful for 5..360-degree tests.
+        if step == 0:
+            reported_milestones = set()
+
+        progress_deg = turn_direction * heading_change_deg
+        for milestone_deg in (5, 10, 20, 40, 45, 90, 180, 270, 360):
+            if (
+                milestone_deg <= abs(TARGET_TURN_DEG)
+                and milestone_deg not in reported_milestones
+                and progress_deg >= milestone_deg
+            ):
+                reported_milestones.add(milestone_deg)
+                print(
+                    f"MILESTONE {milestone_deg:>3} deg | "
+                    f"t={elapsed:.2f}s | "
+                    f"turn={heading_change_deg:+.3f} deg | "
+                    f"remaining={remaining_turn_after_deg:+.3f} deg | "
+                    f"YR={yaw_rate_deg_s:+.3f} deg/s | "
+                    f"ROLL={roll_deg:+.3f} deg | "
+                    f"ALT={state['altitude_ft']:.3f} ft"
+                )
+
         whole_second = int(
             elapsed
         )
@@ -851,9 +919,15 @@ try:
         mission_heading,
     )
 
+    final_remaining_turn_deg = (
+        TARGET_TURN_DEG
+        -
+        cumulative_heading_change_deg
+    )
+
     final_ctrl = controller(
         final,
-        target_heading_error_deg,
+        final_remaining_turn_deg,
     )
 
     forward_delta_ft = (
@@ -893,7 +967,7 @@ try:
 
     print()
     print("=" * 120)
-    print("5-DEG CLOSED-LOOP TURN RESULT")
+    print("PARAMETRIC CLOSED-LOOP TURN RESULT")
     print("=" * 120)
 
     print(
@@ -907,8 +981,8 @@ try:
     )
 
     print(
-        f"final heading change = "
-        f"{wrap_deg(final['heading_error_deg'] - initial['heading_error_deg']):+.3f} deg"
+        f"final cumulative turn = "
+        f"{cumulative_heading_change_deg:+.3f} deg"
     )
 
     print(
@@ -1013,8 +1087,8 @@ try:
             start["same_fdm"]
         ),
 
-        "target_delta_heading_deg": float(
-            TARGET_DELTA_HEADING_DEG
+        "target_turn_deg": float(
+            TARGET_TURN_DEG
         ),
 
         "entry": {
@@ -1058,11 +1132,11 @@ try:
         ),
 
         "final_heading_change_deg": float(
-            wrap_deg(
-                final["heading_error_deg"]
-                -
-                initial["heading_error_deg"]
-            )
+            cumulative_heading_change_deg
+        ),
+
+        "final_remaining_turn_deg": float(
+            final_remaining_turn_deg
         ),
 
         "final_target_error_deg": float(
@@ -1151,6 +1225,11 @@ try:
             max_abs_yaw_rate_deg_s
         ),
 
+        "turn_unwrap_enabled": True,
+        "mapped_rudder_scale": float(env2.mapped_rudder_scale),
+        "mapped_aileron_scale": float(env2.mapped_aileron_scale),
+        "max_turn_time_s": float(MAX_TURN_TIME_S),
+
         "controller": {
             "heading_kp_rudder": float(
                 HEADING_KP_RUDDER
@@ -1214,7 +1293,7 @@ try:
 
     print()
     print(
-        "READY FOR 10-DEG TURN:",
+        "PARAMETRIC TURN PASS:",
         bool(
             success
             and
