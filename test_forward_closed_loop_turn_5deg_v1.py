@@ -430,7 +430,24 @@ try:
     env2 = start["env2"]
     env2.mapped_rudder_scale = 0.500
     env2.mapped_aileron_scale = 0.300
+    #env2.collective_scale = 0.16
     fdm = start["fdm"]
+    _original_apply_action = env2._apply_action
+    def _turn_apply_action(action):
+      controls = _original_apply_action(action) 
+      #fdm["fcs/collective-cmd-norm"] = 0.587
+      alt = float(fdm["position/h-agl-ft"])
+      vs = float(fdm["velocities/h-dot-fps"])
+      physical_collective = np.clip(
+          0.587
+          +0.0010*(300.0 - alt)
+          -0.0060 * vs,
+          0.575,
+          0.600,
+      )
+      fdm["fcs/collective-cmd-norm"] = float(physical_collective)
+      return controls
+    env2._apply_action = _turn_apply_action
     lat0 = start["lat0"]
     lon0 = start["lon0"]
     mission_heading = start["mission_heading"]
@@ -822,6 +839,10 @@ try:
 
             "used_a0": float(
                 used[0]
+            ),
+
+            "physical_collective": float(
+                fdm["fcs/collective-cmd-norm"] 
             ),
 
             "used_a1": float(
