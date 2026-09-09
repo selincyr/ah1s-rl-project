@@ -153,11 +153,12 @@ TURN_TIME_MIN_S = 12.0
 TURN_RATE_BUDGET_DEG_S = 0.80
 TURN_SETTLE_BUDGET_S = 20.0
 
-MAX_TURN_TIME_S = max(
-    TURN_TIME_MIN_S,
-    abs(TARGET_TURN_DEG) / TURN_RATE_BUDGET_DEG_S
-    + TURN_SETTLE_BUDGET_S,
-)
+#MAX_TURN_TIME_S = max(
+ #   TURN_TIME_MIN_S,
+  #  abs(TARGET_TURN_DEG) / TURN_RATE_BUDGET_DEG_S
+  #  + TURN_SETTLE_BUDGET_S,
+#)
+MAX_TURN_TIME_S = 30.0
 
 TARGET_HEADING_TOL_DEG = 0.50
 TARGET_YAW_RATE_TOL_DEG_S = 0.25
@@ -314,27 +315,21 @@ def controller(
     
     desired_roll_deg= float(
         np.clip(
-            -0.60 * heading_error_deg,
-            -4.0,
+            0.25 * heading_error_deg,
             0.0,
+            5.0,
         )
     )
     
-    #delta_a2 = (
-    #    0.12*(desired_roll_deg - roll_deg)
-    #)
-    
-    delta_a2 = 0.0
-    
+   
     delta_a2 = float(
         np.clip(
-            delta_a2,
-            -
-            MAX_REVERSE_AILERON_DELTA,
-            +
-            MAX_POSITIVE_AILERON_DELTA,
-        )
+           0.35 * (desired_roll_deg - roll_deg),
+           -1.0,
+           +1.0,
+       )
     )
+    
 
     return {
         "heading_error_deg": float(
@@ -434,7 +429,7 @@ start = build_forward_entry()
 try:
     env2 = start["env2"]
     env2.mapped_rudder_scale = 0.500
-    env2.mapped_aileron_scale = 0.026
+    env2.mapped_aileron_scale = 0.300
     fdm = start["fdm"]
     lat0 = start["lat0"]
     lon0 = start["lon0"]
@@ -579,15 +574,14 @@ try:
         action = base_action.copy()
 
         alt_corr = np.clip(
-            0.030 *(300.0 - before["altitude_ft"]) - 0.120 * before["vertical_speed_fps"],-0.40,+0.40
+            0.050 *(300.0 - before["altitude_ft"]) - 0.120 * before["vertical_speed_fps"],-0.40,+0.40
         )
         action[0] = float(np.clip(base_action[0] + alt_corr, -1.0, +1.0))
         # Stage-2 neural collective/elevator stay untouched.
         action[2] = float(
             np.clip(
-                action[2]
-                +
-                base_action[2],
+                
+                ctrl["delta_a2"],
                 -1.0,
                 +1.0,
             )
