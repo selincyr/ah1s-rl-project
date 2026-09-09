@@ -1,3 +1,4 @@
+%%writefile /content/ah1s-rl-project/test_forward_closed_loop_turn_5deg_v1.py
 from pathlib import Path
 import csv
 import json
@@ -112,7 +113,7 @@ stage2_model = ns[
 # TURN TARGET / CONTROLLER
 # =====================================================================
 
-TARGET_TURN_DEG = 10.0
+TARGET_TURN_DEG = 20.0
 
 # Identified safe coordinated seed:
 MAX_POSITIVE_AILERON_DELTA = 0.30
@@ -310,16 +311,21 @@ def controller(
     # A small roll-level term remains active near the target.
     # -------------------------------------------------------------
 
-    delta_a2 = (
-        HEADING_KP_AILERON
-        *
-        heading_error_deg
-        -
-        ROLL_LEVEL_KP_AILERON
-        *
-        roll_deg
+    
+    desired_roll_deg= float(
+        np.clip(
+            -0.60 * heading_error_deg,
+            -4.0,
+            0.0,
+        )
     )
-
+    
+    #delta_a2 = (
+    #    0.12*(desired_roll_deg - roll_deg)
+    #)
+    
+    delta_a2 = 0.0
+    
     delta_a2 = float(
         np.clip(
             delta_a2,
@@ -427,7 +433,7 @@ start = build_forward_entry()
 
 try:
     env2 = start["env2"]
-    env2.mapped_rudder_scale = 0.260
+    env2.mapped_rudder_scale = 0.500
     env2.mapped_aileron_scale = 0.026
     fdm = start["fdm"]
     lat0 = start["lat0"]
@@ -572,12 +578,16 @@ try:
 
         action = base_action.copy()
 
+        alt_corr = np.clip(
+            0.030 *(300.0 - before["altitude_ft"]) - 0.120 * before["vertical_speed_fps"],-0.40,+0.40
+        )
+        action[0] = float(np.clip(base_action[0] + alt_corr, -1.0, +1.0))
         # Stage-2 neural collective/elevator stay untouched.
         action[2] = float(
             np.clip(
                 action[2]
                 +
-                ctrl["delta_a2"],
+                base_action[2],
                 -1.0,
                 +1.0,
             )
