@@ -1,3 +1,5 @@
+###################TEACHERDAN VERİ TOPLAYAN DOSYA BUUUUU3########################################################
+
 from __future__ import annotations
 
 """
