@@ -1,4 +1,4 @@
-
+#############teacherdan topladığımımz veriyi alıp ilk student modelini eğite dosya ##########################
 from pathlib import Path
 import json
 import csv
