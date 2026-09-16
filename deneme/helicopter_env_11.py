@@ -4,7 +4,23 @@ import jsbsim
 import gymnasium as gym
 
 from gymnasium import spaces
+"""
+AH-1S stage-1 PPO environment.
+BU dosya PPO algoritması ile JSBSim uçuş simülasyonu arasındaki bağlantıyı kurar.
 
+Temel Görevleri:
+1. AH-1S JSBSim başlangıç senaryosunu yüklemek,
+2. rotor devrinin uçuş için hazır olmasını beklemek
+3.JSBSim uçuş durumunu 13 bouyutlu observation'a dönüştürmek,
+4.PPO'nun ürettiği dört action değerini uçuş kontrollerine uygulamak,
+5.her simülasyon adımından sonra reward hesaplamak,
+6.başarı ve güvenlik sonlandırma şartlarını kontrol etmek.
+
+Stage1 hedefi:
+Helikopterin dikey kalkış yapması , 300 ft irtifaya kontorllü biçimde yükselmesi ve yatay sapması düşük kararlı bir hover gerçekleştirmesidir.
+
+Bu dosya tek başına eğitim başlatmaz,eğitim ve test dosyaları HelicopterEnv sınıfını import ederek kullanır.
+"""
 
 class HelicopterEnv(gym.Env):
 
@@ -132,7 +148,7 @@ class HelicopterEnv(gym.Env):
             )
 
         self.fdm.run_ic()
-
+    #PPO kontrole başlamadan önce rotor devrinin 320 RPM e ulaşması beklenir.Böylece model,motor/rotor henüz hazır değilken uçuş kontrolü üretmez.
     def _warmup_rotor(self):
         while self.fdm["propulsion/engine/rotor-rpm"] < 320.0:
             if not self.fdm.run():
@@ -148,7 +164,7 @@ class HelicopterEnv(gym.Env):
                 np.cos(angle)
             )
         )
-
+#JSBSim den irtifa, hız, heading,pitch,roll,açısal hızlar ve rotor RPM değerleri fiziksel birimlerinde okunur.Bu değerler reward hesabında ,loglarda ve observation üretiminde kullanılır.
     def _get_state(self):
         altitude = float(self.fdm["position/h-agl-ft"])
         heading = float(self.fdm["attitude/heading-true-rad"])
@@ -193,7 +209,8 @@ class HelicopterEnv(gym.Env):
                 self.fdm["propulsion/engine/rotor-rpm"]
             )
         }
-
+# Fiziksel uçuş değerleri ppo nun kullanacağı normalize 13 boyutlu observation vektörüne dönüştürülür.
+# değerler observation dışına çıkarsa np.clip() ile tanımlanan alt ve üst sınırlara çekilir.
     def _get_obs_from_state(self, state):
         heading_error = state["heading_error"]
 
@@ -224,7 +241,8 @@ class HelicopterEnv(gym.Env):
             self.observation_space.low,
             self.observation_space.high
         ).astype(np.float32)
-
+#İrtifaya bağlı dengeli uçuş kontrol değerleri interpolasyonla hesaplanır.
+# ppo bütün kontrolü sıfırdan öğrenmek yerine bu trim değerlerinin üzerine küçük düzeltmeler üretir.
     def _get_trim_controls(self, altitude):
         collective = float(
             np.interp(
@@ -259,7 +277,10 @@ class HelicopterEnv(gym.Env):
         )
 
         return collective, elevator, aileron, rudder
-
+#Reward yapısını uçuş durumuna göre değiştirmek için görev üç faza ayrılır:
+    #TAKEOFF:yerden kalkma
+    #CLIMB:hedef irtifaya yükselme,
+    #HOVER:300ft civarında konum ve irtifa koruma
     def _update_phase(self, altitude):
         # V11 keeps the successful V10 mission structure.
         # HOVER means level-off / hover-acquisition starts at 285 ft.
@@ -269,7 +290,7 @@ class HelicopterEnv(gym.Env):
             self.phase = "CLIMB"
         else:
             self.phase = "HOVER"
-
+#Helikopter hedef irtifaya yaklaştıkça hedef dikey hız kademeli olarak azaltılır.Böylece 300 ft nin aşılması ve sert level_off önlenir.
     def _target_vertical_speed(self, altitude):
         # V10 vertical-speed schedule retained in V11.
         if altitude < 30.0:
@@ -386,6 +407,21 @@ class HelicopterEnv(gym.Env):
 
         return obs, info
 
+
+
+    
+#bir PPO kontrol adımının akışı:
+#1.PPO  action değerleri[-1,1] aralığında sınırlandırılır.
+#2. Mevcut irtifaya uygun trim kontrolleri hesaplanır.
+#3.PPOresidual actionları trim değerlerine eklenir
+#4.Collective,elevator,aileron ve rudder JSBSim e uygulanır
+#5.JSBSim fizik modeli ilerletilir
+#6. yeni uçuş durumu okunur.
+#7.reward başarı ve güvenlik şartları hesaplanır.
+#8.yeni observation ppo ya dödürülür.
+
+
+    
     def step(self, action):
         self.steps += 1
 
